@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>LOGISTICS FLEET MONITORING</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #d1d5db; /* Classic industrial light-slate backdrop */
+        }
+
+        /* 3D Glossy LED Indicator Spheres */
+        .led-sphere {
+            width: 22px;
+            height: 22px;
+            border-radius: 9999px;
+            flex-shrink: 0;
+            position: relative;
+            box-shadow: inset 0 -3px 5px rgba(0, 0, 0, 0.55), inset 0 2px 3px rgba(255, 255, 255, 0.65);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .led-sphere::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 5px;
+            width: 7px;
+            height: 4px;
+            border-radius: 9999px;
+            background: rgba(255, 255, 255, 0.75);
+            transform: rotate(-25deg);
+        }
+
+        .led-available {
+            background: radial-gradient(circle at 35% 30%, #86efac, #22c55e 45%, #15803d 95%);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.85), inset 0 -3px 5px rgba(0, 0, 0, 0.5), inset 0 2px 3px rgba(255, 255, 255, 0.75);
+        }
+        .led-reported {
+            background: radial-gradient(circle at 35% 30%, #fde047, #eab308 45%, #a16207 95%);
+            box-shadow: 0 0 8px rgba(234, 179, 8, 0.85), inset 0 -3px 5px rgba(0, 0, 0, 0.5), inset 0 2px 3px rgba(255, 255, 255, 0.75);
+        }
+        .led-down {
+            background: radial-gradient(circle at 35% 30%, #fca5a5, #ef4444 45%, #991b1b 95%);
+            box-shadow: 0 0 9px rgba(239, 68, 68, 0.9), inset 0 -3px 5px rgba(0, 0, 0, 0.55), inset 0 2px 3px rgba(255, 255, 255, 0.75);
+        }
+        .led-restored {
+            background: radial-gradient(circle at 35% 30%, #93c5fd, #3b82f6 45%, #1d4ed8 95%);
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.85), inset 0 -3px 5px rgba(0, 0, 0, 0.5), inset 0 2px 3px rgba(255, 255, 255, 0.75);
+        }
+
+        /* Metallic Dark Capsule Unit Tile */
+        .mems-unit-pill {
+            background: linear-gradient(180deg, #242933 0%, #1e232b 55%, #161a20 100%);
+            border: 1.5px solid #111317;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            transition: all 0.15s ease-in-out;
+        }
+        .mems-unit-pill:hover {
+            transform: translateY(-1px) scale(1.03);
+            border-color: #60a5fa;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+            z-index: 20;
+        }
+        .mems-unit-pill.long-down-flagged {
+            background: linear-gradient(180deg, #3b1419 0%, #291015 55%, #1a090d 100%);
+            border-color: #f43f5e;
+            box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.55), 0 3px 8px rgba(225, 29, 72, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        }
+        .mems-unit-pill.highlighted-type {
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 2px #f59e0b, 0 4px 12px rgba(245, 158, 11, 0.5);
+        }
+
+        /* Legend Pill Capsule */
+        .mems-legend-pill {
+            background: linear-gradient(180deg, #373b44 0%, #23262c 100%);
+            border: 1.5px solid #14161a;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            transition: all 0.15s ease;
+        }
+        .mems-legend-pill:hover {
+            transform: translateY(-1px);
+            border-color: #94a3b8;
+        }
+        .mems-legend-pill.active-filter {
+            border-color: #ffffff;
+            box-shadow: 0 0 0 2px #1e293b, 0 0 0 4px #3b82f6;
+        }
+
+        /* Summary Table Styling */
+        .mems-table {
+            border-collapse: collapse;
+            background-color: #d8dce3;
+        }
+        .mems-table th {
+            background-color: #e59a24;
+            color: #111827;
+            font-weight: 800;
+            border: 1px solid #6b7280;
+            padding: 7px 12px;
+            font-size: 0.78rem;
+            letter-spacing: 0.02em;
+        }
+        .mems-table td {
+            border: 1px solid #7f8694;
+            padding: 5px 12px;
+            font-size: 0.82rem;
+            color: #111827;
+        }
+        .mems-table tr.subtotal-row td {
+            background-color: #e59a24;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .mems-table tr.grandtotal-row td {
+            background-color: #d98a14;
+            font-weight: 900;
+            color: #000000;
+            border-top: 2px solid #374151;
+        }
+        .mems-table tr.data-row:hover td:not(.category-cell) {
+            background-color: #cbd5e1;
+            cursor: pointer;
+        }
+        .mems-table tr.data-row.selected-row td:not(.category-cell) {
+            background-color: #fef08a;
+            font-weight: 700;
+        }
+
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #cbd5e1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #64748b;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-900 selection:bg-blue-600 selection:text-white">
+
+    <!-- Top Utility & Filter Bar -->
+    <header class="bg-slate-900 text-slate-100 border-b border-slate-700 sticky top-0 z-40 shadow-lg">
+        <div class="max-w-[1440px] mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-amber-500 rounded-lg text-slate-950 shadow">
+                    <i class="w-5 h-5" data-lucide="activity"></i>
+                </div>
+                <div class="flex items-center gap-2.5">
+                    <h1 class="text-lg sm:text-xl font-black tracking-wider text-white uppercase">LOGISTICS FLEET MONITORING</h1>
+                    <span id="syncStatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Live Sync Ready</span>
+                </div>
+            </div>
+
+            <!-- Interactive Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Motorpool Location Filter -->
+                <div class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
+                    <i class="w-3.5 h-3.5 text-amber-400" data-lucide="map-pin"></i>
+                    <select id="locationFilter" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer">
+                        <option value="All Motorpools" class="bg-slate-800">All Motorpools</option>
+                        <option value="GEM Motorpool" class="bg-slate-800">GEM Motorpool</option>
+                        <option value="SV Repair Units" class="bg-slate-800">SV Repair Units</option>
+                        <option value="Los Amigos Motorpool" class="bg-slate-800">Los Amigos Motorpool</option>
+                        <option value="PMS / GENSET" class="bg-slate-800">PMS / GENSET</option>
+                    </select>
+                </div>
+
+                <!-- Action Buttons -->
+                <button onclick="downloadCSV()" class="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-600 transition">
+                    <i class="w-3.5 h-3.5" data-lucide="download"></i> Export CSV
+                </button>
+                <button onclick="openAddAssetModal()" class="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-1.5 rounded-lg shadow shadow-blue-600/30 transition">
+                    <i class="w-3.5 h-3.5" data-lucide="plus-circle"></i> Add Asset Number
+                </button>
+                <button onclick="resetToDefaults()" class="flex items-center gap-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-rose-500/30 transition" title="Reset Grid to Default State">
+                    <i class="w-3.5 h-3.5" data-lucide="rotate-ccw"></i> Reset Defaults
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="max-w-[1440px] w-full mx-auto px-3 sm:px-6 py-5 flex-1 space-y-6">
+
+        <!-- Dashboard Title, Search & 4-Status LED Legend Bar -->
+        <section class="text-center space-y-3">
+            <h2 class="text-xl sm:text-2xl md:text-[26px] font-black text-slate-900 tracking-wide uppercase">
+                LOGISTICS FLEET MONITORING
+            </h2>
+
+            <!-- Interactive Status Legend Pills & Search Filter -->
+            <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-1">
+                <button id="legend-available" onclick="toggleStatusFilter('available')" class="mems-legend-pill px-3.5 py-1.5 flex items-center gap-2.5 cursor-pointer">
+                    <span class="led-sphere led-available"></span>
+                    <span class="text-white font-bold text-xs sm:text-sm tracking-wide">Operational</span>
+                    <span id="count-pill-available" class="text-[11px] font-extrabold bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button id="legend-reported" onclick="toggleStatusFilter('reported')" class="mems-legend-pill px-3.5 py-1.5 flex items-center gap-2.5 cursor-pointer">
+                    <span class="led-sphere led-reported"></span>
+                    <span class="text-white font-bold text-xs sm:text-sm tracking-wide">Reported</span>
+                    <span id="count-pill-reported" class="text-[11px] font-extrabold bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button id="legend-down" onclick="toggleStatusFilter('down')" class="mems-legend-pill px-3.5 py-1.5 flex items-center gap-2.5 cursor-pointer">
+                    <span class="led-sphere led-down"></span>
+                    <span class="text-white font-bold text-xs sm:text-sm tracking-wide">Down</span>
+                    <span id="count-pill-down" class="text-[11px] font-extrabold bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <button id="legend-restored" onclick="toggleStatusFilter('restored')" class="mems-legend-pill px-3.5 py-1.5 flex items-center gap-2.5 cursor-pointer">
+                    <span class="led-sphere led-restored"></span>
+                    <span class="text-white font-bold text-xs sm:text-sm tracking-wide">For Testing</span>
+                    <span id="count-pill-restored" class="text-[11px] font-extrabold bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <!-- Auto Long-Down (>7d) Quick Filter Pill -->
+                <button id="legend-longdown" onclick="toggleLongDownFilter()" class="mems-legend-pill px-3.5 py-1.5 flex items-center gap-2 cursor-pointer">
+                    <i class="w-4 h-4 text-rose-400" data-lucide="flame"></i>
+                    <span class="text-white font-bold text-xs sm:text-sm tracking-wide">Long Down (>7d)</span>
+                    <span id="count-pill-longdown" class="text-[11px] font-extrabold bg-rose-500/25 text-rose-300 px-1.5 py-0.5 rounded-md">0</span>
+                </button>
+
+                <!-- Search Input -->
+                <div class="relative">
+                    <i class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" data-lucide="search"></i>
+                    <input id="searchInput" oninput="renderDashboard()" type="text" placeholder="Search asset code, type, or category..." class="pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-medium text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 w-52 sm:w-64 shadow"/>
+                </div>
+
+                <button id="clearFiltersBtn" onclick="clearAllFilters()" class="hidden text-xs font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-2 rounded-xl shadow transition flex items-center gap-1">
+                    <i class="w-3.5 h-3.5" data-lucide="x-circle"></i> All / Reset Filters
+                </button>
+            </div>
+        </section>
+
+        <!-- Interactive Equipment Tile Wall (Dark Container with Multi-Column Capsule Grid) -->
+        <section class="bg-[#11151c] border border-slate-700 rounded-xl p-3.5 sm:p-5 shadow-xl relative space-y-3.5">
+            <!-- Tile Wall Sub-Header Bar -->
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300 font-semibold">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Interactive Asset LED Wall</span>
+                    <span id="totalMonitoredBadge" class="text-[11px] font-bold bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.5 rounded-md">0 Units Monitored</span>
+                    <span id="wallLongDownFlagBadge" class="hidden text-[11px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-md">0 Auto-Flagged >7d Down</span>
+                    <span id="activeHighlightTag" class="hidden text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-md"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="hidden sm:inline text-[11px] text-slate-400">Units >7 days down auto-flag with <strong class="text-rose-400">>7d</strong> badge • Click any pill to manage</span>
+                    <button onclick="openAddAssetModal()" class="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold px-3 py-1.5 rounded-lg shadow transition">
+                        <i class="w-3.5 h-3.5" data-lucide="plus"></i> Add Asset Number
+                    </button>
+                </div>
+            </div>
+
+            <div id="memsTileColumnsContainer" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2.5 items-start">
+                <!-- Dynamically rendered columns of dark pill capsules with glowing LEDs -->
+            </div>
+            <div id="emptyWallMessage" class="hidden py-10 text-center text-slate-400 font-semibold text-sm">
+                No equipment units match the current filter criteria.
+            </div>
+        </section>
+
+        <!-- Equipment Availability Summary Table -->
+        <section class="bg-slate-200 border border-slate-400 rounded-xl p-3 sm:p-5 shadow-lg space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <i class="w-4 h-4 text-amber-600" data-lucide="table"></i>
+                    <h3 class="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide">Equipment Availability Summary</h3>
+                </div>
+                <span class="text-[11px] font-semibold text-slate-600">Calculated dynamically from LED Wall • Click any row to highlight units above</span>
+            </div>
+
+            <div class="overflow-x-auto rounded-lg border border-slate-500 shadow-sm">
+                <table class="mems-table w-full text-left">
+                    <thead>
+                        <tr>
+                            <th class="w-48">CATEGORY</th>
+                            <th>EQUIPMENT TYPE</th>
+                            <th class="text-center w-28">NO. OF UNITS</th>
+                            <th class="text-center w-28">OPERATIONAL</th>
+                            <th class="text-center w-28">DOWN</th>
+                            <th class="text-center w-32">AVAILABILITY%</th>
+                        </tr>
+                    </thead>
+                    <tbody id="memsSummaryTableBody">
+                        <!-- Dynamically populated summary rows, subtotals, and Grand Total -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECTION 1 (Below Equipment Availability Summary): Repaired / For Testing Assets — Daily & Monthly Log -->
+        <section id="repairedByDateSection" class="bg-slate-900 text-slate-100 border border-slate-700 rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-blue-500/20 border border-blue-500/40 rounded-lg text-blue-300">
+                        <i class="w-4 h-4" data-lucide="wrench"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-black text-white uppercase tracking-wide flex flex-wrap items-center gap-2">
+                            <span>REPAIRED / FOR TESTING ASSETS — DAILY & MONTHLY LOG</span>
+                            <span id="repairedCountBadge" class="text-[11px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2 py-0.5 rounded-full">0 Logged</span>
+                            <span id="repairedOperationalCountBadge" class="text-[11px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full">0 Repaired (Operational)</span>
+                            <span id="repairedLongDownResolvedBadge" class="text-[11px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full">0 Long Down (>7d) Repaired</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Tracks units currently For Testing (Blue LED) and units promoted from For Testing to Operational (Green LED) as Repaired</p>
+                    </div>
+                </div>
+
+                <!-- Mode Switcher (Specific Date | Monthly | All Dates) & Pickers -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <!-- Filter Mode Switcher -->
+                    <div class="flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700">
+                        <button type="button" id="repModeDateBtn" onclick="setRepairedFilterMode('date')" class="px-2.5 py-1 rounded-md text-xs font-bold bg-blue-600 text-white transition">
+                            Specific Date
+                        </button>
+                        <button type="button" id="repModeMonthBtn" onclick="setRepairedFilterMode('month')" class="px-2.5 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition">
+                            Monthly
+                        </button>
+                        <button type="button" id="repModeAllBtn" onclick="setRepairedFilterMode('all')" class="px-2.5 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition">
+                            All Dates
+                        </button>
+                    </div>
+
+                    <!-- Specific Date Picker -->
+                    <div id="repairedDatePickerWrap" class="flex items-center gap-1.5 bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5">
+                        <i class="w-3.5 h-3.5 text-blue-400" data-lucide="calendar"></i>
+                        <label for="repairedDateInput" class="text-[11px] font-semibold text-slate-300">Date:</label>
+                        <input id="repairedDateInput" type="date" onchange="handleRepairedDateChange()" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"/>
+                    </div>
+
+                    <!-- Monthly Picker -->
+                    <div id="repairedMonthPickerWrap" class="hidden flex items-center gap-1.5 bg-slate-800 border border-amber-500/50 rounded-lg px-2.5 py-1.5">
+                        <i class="w-3.5 h-3.5 text-amber-400" data-lucide="calendar-range"></i>
+                        <label for="repairedMonthInput" class="text-[11px] font-semibold text-amber-300">Month:</label>
+                        <input id="repairedMonthInput" type="month" onchange="handleRepairedMonthChange()" class="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer"/>
+                    </div>
+
+                    <!-- Quick Current Date/Month Reset Button -->
+                    <button type="button" id="repairedQuickCurrentBtn" onclick="setRepairedToCurrent()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition">
+                        Today
+                    </button>
+
+                    <!-- Quick Toggle: Only Long Down (>7d) Repaired -->
+                    <button type="button" id="repOnlyLongDownBtn" onclick="toggleRepairedOnlyLongDown()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                        <i class="w-3.5 h-3.5 text-rose-400" data-lucide="flame"></i>
+                        <span>Long Down Repaired Only</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Monthly Breakdown Summary Strip & Resolved Long Down Units Spotlight -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5">
+                <!-- Left: Monthly Repair Summary Cards -->
+                <div class="lg:col-span-5 bg-slate-950/70 border border-slate-800 rounded-xl p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-black uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                            <i class="w-3.5 h-3.5" data-lucide="bar-chart-3"></i> Monthly Repaired / Testing Summary
+                        </span>
+                        <span class="text-[10px] text-slate-400">Click any month to filter</span>
+                    </div>
+                    <div id="monthlyRepairedSummaryList" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <!-- Dynamically rendered monthly cards -->
+                    </div>
+                </div>
+
+                <!-- Right: Long Down (>7d) Units Repaired Spotlight (for Selected Date / Month) -->
+                <div class="lg:col-span-7 bg-emerald-950/25 border border-emerald-500/35 rounded-xl p-3.5 space-y-2.5">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <span class="text-xs font-black uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                            <i class="w-3.5 h-3.5" data-lucide="check-circle-2"></i>
+                            <span id="longDownRepairedSpotlightTitle">Long Down (>7d) Units Repaired / For Testing</span>
+                        </span>
+                        <span id="longDownSpotlightCount" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/40">0 Units</span>
+                    </div>
+                    <div id="longDownRepairedSpotlightGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- Dynamically rendered resolved Long Down units with exact date & month -->
+                    </div>
+                    <div id="emptyLongDownSpotlightMsg" class="hidden py-3 text-center text-[11px] text-slate-400 italic">
+                        No Long Down (>7d) units recorded as repaired or for testing in this specific date/month filter.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Repaired Assets Table -->
+            <div class="overflow-x-auto rounded-lg border border-slate-800">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-800/90 text-slate-300 uppercase text-[11px] tracking-wider border-b border-slate-700">
+                            <th class="py-2.5 px-3 font-bold">Asset No.</th>
+                            <th class="py-2.5 px-3 font-bold">Repair / Testing Status</th>
+                            <th class="py-2.5 px-3 font-bold">Category</th>
+                            <th class="py-2.5 px-3 font-bold">Equipment Type</th>
+                            <th class="py-2.5 px-3 font-bold">Motorpool</th>
+                            <th class="py-2.5 px-3 font-bold">Repaired Date & Month</th>
+                            <th class="py-2.5 px-3 font-bold text-center">Prior Downtime</th>
+                            <th class="py-2.5 px-3 font-bold">Repair / Testing Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repairedByDateTableBody" class="divide-y divide-slate-800 bg-slate-950/50">
+                        <!-- Dynamically rendered repaired & for-testing assets -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyRepairedDateMessage" class="hidden py-8 text-center bg-slate-950/40 rounded-lg border border-dashed border-slate-800 space-y-1">
+                <p id="emptyRepairedTitle" class="text-xs sm:text-sm font-bold text-slate-300">No repaired or for testing assets recorded for the selected period.</p>
+                <p class="text-[11px] text-slate-500">Switch between Specific Date, Monthly, or All Dates, or promote a For Testing unit to Operational.</p>
+            </div>
+        </section>
+
+        <!-- SECTION 2: Dedicated Section for Long Down (>7d) & Running Repair Assets -->
+        <section id="longDownRunningRepairSection" class="bg-slate-900 text-slate-100 border border-slate-700 rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 bg-rose-500/20 border border-rose-500/40 rounded-lg text-rose-400">
+                        <i class="w-4 h-4" data-lucide="alert-octagon"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm sm:text-base font-black text-white uppercase tracking-wide flex flex-wrap items-center gap-2">
+                            <span>Long Down (>7 Days) & Running Repair Assets</span>
+                            <span id="sectionLongDownBadge" class="text-[11px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full">0 Long Down (>7d)</span>
+                            <span id="sectionRunningRepairBadge" class="text-[11px] font-extrabold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full">0 Running Repair</span>
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Auto-flags assets down for more than 7 days and tracks all units currently under active repair or reported fault</p>
+                    </div>
+                </div>
+
+                <!-- Sub-Section Filter Pills -->
+                <div class="flex flex-wrap items-center gap-1.5 bg-slate-800/90 p-1 rounded-xl border border-slate-700">
+                    <button type="button" id="repairTabAll" onclick="setRepairSectionFilter('all')" class="px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white transition">
+                        All Active (<span id="tabCountAll">0</span>)
+                    </button>
+                    <button type="button" id="repairTabLongDown" onclick="setRepairSectionFilter('long_down')" class="px-3 py-1 rounded-lg text-xs font-bold text-rose-300 hover:bg-rose-500/20 transition">
+                        Long Down >7d (<span id="tabCountLongDown">0</span>)
+                    </button>
+                    <button type="button" id="repairTabRunning" onclick="setRepairSectionFilter('running')" class="px-3 py-1 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition">
+                        Running Repair (<span id="tabCountRunning">0</span>)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Cards / Grid of Long Down & Running Repair Assets -->
+            <div id="longDownRunningGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                <!-- Dynamically rendered cards -->
+            </div>
+            <div id="emptyLongDownRunningMessage" class="hidden py-8 text-center bg-slate-950/40 rounded-lg border border-dashed border-slate-800">
+                <p class="text-xs sm:text-sm font-bold text-slate-300">No Long Down or Running Repair assets match the current filter.</p>
+                <p class="text-[11px] text-slate-500 mt-0.5">All filtered fleet units are currently Operational or For Testing.</p>
+            </div>
+        </section>
+
+        <!-- Custom Hover Tooltip for LED Pills -->
+        <div id="unitHoverTooltip" class="hidden fixed z-50 pointer-events-none bg-slate-900/95 backdrop-blur-md text-slate-100 border border-slate-600 rounded-xl p-3 shadow-2xl text-xs w-72 space-y-1.5">
+            <div class="flex items-center justify-between border-b border-slate-700 pb-1.5 gap-2">
+                <span id="ttAssetCode" class="font-mono font-black text-sm text-white">--</span>
+                <div class="flex items-center gap-1">
+                    <span id="ttLongDownFlag" class="hidden px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-rose-600 text-white tracking-wide">LONG DOWN >7D</span>
+                    <span id="ttStatusBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">--</span>
+                </div>
+            </div>
+            <div class="space-y-1 text-[11px]">
+                <div class="flex justify-between"><span class="text-slate-400">Category:</span><span id="ttCategory" class="font-semibold text-slate-300 text-right">--</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Equipment:</span><span id="ttEquipType" class="font-semibold text-slate-200 text-right">--</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Location:</span><span id="ttLocation" class="font-semibold text-amber-300 text-right">--</span></div>
+                <div id="ttDowntimeRow" class="hidden flex justify-between"><span class="text-slate-400">Downtime:</span><span id="ttDowntime" class="font-extrabold text-rose-400 text-right">--</span></div>
+                <div id="ttRepairedDateRow" class="hidden flex justify-between"><span class="text-slate-400">Repaired Date:</span><span id="ttRepairedDate" class="font-bold text-blue-300 text-right">--</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Completion:</span><span id="ttCompletion" class="font-bold text-blue-300">--%</span></div>
+                <div id="ttNotesWrapper" class="pt-1 border-t border-slate-800">
+                    <span class="text-slate-400 block">Diagnosis / Notes:</span>
+                    <span id="ttNotes" class="text-slate-200 italic">--</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modal: Add Asset Number for Monitoring (Single or Bulk) -->
+    <div class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex justify-center items-center p-4 z-50" id="addAssetModal">
+        <div class="bg-slate-800 rounded-2xl max-w-lg w-full shadow-2xl border border-slate-700 overflow-hidden text-slate-100 max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-white flex items-center gap-2">
+                    <i class="w-5 h-5 text-amber-400" data-lucide="plus-circle"></i> Add Asset Number for Monitoring
+                </h3>
+                <button class="text-slate-400 hover:text-white" onclick="closeModal('addAssetModal')" type="button">
+                    <i class="w-5 h-5" data-lucide="x"></i>
+                </button>
+            </div>
+
+            <form class="p-6 space-y-4 overflow-y-auto flex-1" id="addAssetForm" onsubmit="handleAddAssetSubmit(event)">
+                <!-- Mode Switcher: Single vs Bulk -->
+                <div class="flex items-center justify-between bg-slate-900/80 p-1.5 rounded-xl border border-slate-700">
+                    <button type="button" id="modeSingleBtn" onclick="setAddEntryMode('single')" class="flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white transition">
+                        Single Asset Number
+                    </button>
+                    <button type="button" id="modeBulkBtn" onclick="setAddEntryMode('bulk')" class="flex-1 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition">
+                        Bulk Asset Numbers
+                    </button>
+                </div>
+
+                <!-- Category & Equipment Type -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+                        <select id="newAssetCategorySelect" onchange="handleNewCategoryChange(this.value)" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="HEAVY EQUIPMENT">HEAVY EQUIPMENT</option>
+                            <option value="LIGHT EQUIPMENT">LIGHT EQUIPMENT</option>
+                            <option value="ATTACHMENT">ATTACHMENT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Equipment Type</label>
+                        <select id="newAssetTypeSelect" onchange="handleNewTypeChange(this.value)" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                            <!-- Populated dynamically based on Category -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Equipment Type Input (Hidden unless selected) -->
+                <div id="customEquipTypeWrapper" class="hidden">
+                    <label class="block text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1.5">Specify Custom Equipment Type</label>
+                    <input type="text" id="newCustomAssetType" placeholder="e.g. WATER TRUCK, FORKLIFT, GENSET" class="w-full px-3 py-2.5 bg-slate-900 border border-amber-500/50 rounded-xl text-sm text-slate-100 placeholder-slate-500 uppercase focus:outline-none focus:border-amber-400"/>
+                </div>
+
+                <!-- Single Asset Input -->
+                <div id="singleAssetInputWrapper">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Asset Number / Code</label>
+                    <input type="text" id="newSingleAssetCode" placeholder="e.g. BT-70, DT-01, FDT-01, HB-01" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-100 placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500"/>
+                </div>
+
+                <!-- Bulk Asset Input -->
+                <div id="bulkAssetInputWrapper" class="hidden">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Bulk Asset Numbers (Comma or Newline Separated)</label>
+                    <textarea id="newBulkAssetCodes" rows="3" placeholder="DT-01, DT-02, DT-03
+DT-04" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-100 placeholder-slate-500 uppercase focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <!-- Motorpool Location & Initial LED Status -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Motorpool Location</label>
+                        <select id="newAssetLocation" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="GEM Motorpool">GEM Motorpool</option>
+                            <option value="SV Repair Units">SV Repair Units</option>
+                            <option value="Los Amigos Motorpool">Los Amigos Motorpool</option>
+                            <option value="PMS / GENSET">PMS / GENSET</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Monitoring LED Status</label>
+                        <select id="newAssetStatus" onchange="adjustAddFormDefaults()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="released">Operational (Green LED)</option>
+                            <option value="waiting">Reported (Yellow LED)</option>
+                            <option value="ongoing">Down (Red LED)</option>
+                            <option value="restored">For Testing (Blue LED)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Completion & Target Date -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Completion (%)</label>
+                        <input type="number" id="newAssetProgress" min="0" max="100" value="100" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Target Date</label>
+                        <input type="date" id="newAssetTargetDate" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500"/>
+                    </div>
+                </div>
+
+                <!-- Contextual Down Since Date & Repaired Date -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="newAssetDownSinceWrapper">
+                        <label class="block text-xs font-semibold text-rose-400 uppercase tracking-wider mb-1.5">Down / Reported Since (>7d = Long Down)</label>
+                        <input type="date" id="newAssetDownSince" class="w-full px-3 py-2.5 bg-slate-900 border border-rose-500/40 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-rose-400"/>
+                    </div>
+                    <div id="newAssetRepairedDateWrapper" class="hidden">
+                        <label class="block text-xs font-semibold text-blue-400 uppercase tracking-wider mb-1.5">Repaired / For Testing Date</label>
+                        <input type="date" id="newAssetRepairedDate" class="w-full px-3 py-2.5 bg-slate-900 border border-blue-500/40 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-400"/>
+                    </div>
+                </div>
+
+                <!-- Notes / Remarks -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Remarks / Diagnosis Notes</label>
+                    <input type="text" id="newAssetNotes" placeholder="Optional operational status or repair details..." class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"/>
+                </div>
+
+                <div class="pt-3 flex gap-3 justify-end border-t border-slate-700">
+                    <button type="button" onclick="closeModal('addAssetModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5">
+                        <i class="w-4 h-4" data-lucide="check"></i> Add to Monitoring Wall
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Lifecycle Management Deck (Edit Existing Unit LED Status & Category/Type) -->
+    <div class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex justify-center items-center p-4 z-50" id="manageUnitModal">
+        <div class="bg-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-700 overflow-hidden text-slate-100 max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 bg-slate-900 border-b border-slate-700 flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-white flex items-center gap-2">
+                    <i class="w-5 h-5 text-blue-400" data-lucide="sliders"></i> Asset Status Control
+                </h3>
+                <button class="text-slate-400 hover:text-white" onclick="closeModal('manageUnitModal')" type="button">
+                    <i class="w-5 h-5" data-lucide="x"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div class="flex items-center justify-between bg-slate-900/70 p-3.5 rounded-xl border border-slate-700">
+                    <div class="flex items-center gap-3">
+                        <span id="manageUnitBadge" class="px-3 py-1.5 bg-slate-800 border border-slate-600 text-white font-mono text-base font-black rounded-lg">--</span>
+                        <div>
+                            <p id="manageUnitTypeDisplay" class="text-sm font-bold text-slate-100">--</p>
+                            <p id="manageUnitCategoryDisplay" class="text-xs text-slate-400">--</p>
+                        </div>
+                    </div>
+                    <span id="manageUnitLed" class="led-sphere led-available"></span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Category</label>
+                        <select id="manageUnitCategorySelect" onchange="handleManageCategoryChange(this.value)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                            <option value="HEAVY EQUIPMENT">HEAVY EQUIPMENT</option>
+                            <option value="LIGHT EQUIPMENT">LIGHT EQUIPMENT</option>
+                            <option value="ATTACHMENT">ATTACHMENT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Equipment Type</label>
+                        <select id="manageUnitTypeSelect" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-1.5">Update Monitoring LED Status</label>
+                    <select id="manageUnitStatus" onchange="handleManageStatusChange(this.value)" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-sm font-semibold text-slate-100 focus:outline-none focus:border-blue-500">
+                        <option value="released">Operational (Green LED - Active Service)</option>
+                        <option value="waiting">Reported (Yellow LED - Waiting Parts/PMS)</option>
+                        <option value="ongoing">Down (Red LED - On-Going / Job Out)</option>
+                        <option value="restored">For Testing (Blue LED - Post-Repair Trial)</option>
+                    </select>
+                    <p id="manageRepairedPromotionHint" class="hidden text-[11px] font-bold text-emerald-300 bg-emerald-950/50 border border-emerald-500/40 rounded-lg px-2.5 py-1.5 mt-1.5">
+                        ✓ Promoting from For Testing → Operational will log this asset as Repaired in the Daily & Monthly Log.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Motorpool Location</label>
+                    <select id="manageUnitLocation" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500">
+                        <option value="GEM Motorpool">GEM Motorpool</option>
+                        <option value="SV Repair Units">SV Repair Units</option>
+                        <option value="Los Amigos Motorpool">Los Amigos Motorpool</option>
+                        <option value="PMS / GENSET">PMS / GENSET</option>
+                    </select>
+                </div>
+
+                <!-- Down Since Date & Repaired Date Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div id="manageDownSinceWrapper">
+                        <label class="block text-xs font-bold text-rose-400 uppercase tracking-wider mb-1.5">Down / Reported Since</label>
+                        <input id="manageUnitDownSince" type="date" onchange="updateManageLongDownPreview()" class="w-full px-3 py-2 bg-slate-900 border border-rose-500/40 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-rose-400"/>
+                        <p id="manageLongDownPreview" class="text-[10px] font-bold text-slate-400 mt-1">--</p>
+                    </div>
+                    <div id="manageRepairedDateWrapper">
+                        <label id="manageRepairedDateLabel" class="block text-xs font-bold text-blue-400 uppercase tracking-wider mb-1.5">Repaired / For Testing Date</label>
+                        <input id="manageUnitRepairedDate" type="date" class="w-full px-3 py-2 bg-slate-900 border border-blue-500/40 rounded-xl text-xs text-slate-100 focus:outline-none focus:border-blue-400"/>
+                    </div>
+                </div>
+
+                <div class="space-y-1.5 bg-slate-900/50 p-3 rounded-xl border border-slate-700/60">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Repair / Readiness Completion</span>
+                        <span id="progressPercentDisplay" class="text-sm font-black text-amber-400">100%</span>
+                    </div>
+                    <input id="manageUnitProgressSlider" type="range" min="0" max="100" oninput="updateProgressDisplay(this.value)" class="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"/>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Diagnosis / Operational Remarks</label>
+                    <textarea id="manageUnitDescription" rows="2" placeholder="Enter repair notes or status remarks..." class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">Target Completion Date</label>
+                    <input id="manageUnitTargetDate" type="date" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-blue-500"/>
+                </div>
+
+                <div class="pt-3 flex gap-3 justify-between border-t border-slate-700">
+                    <button type="button" onclick="handleDeleteUnitClick()" class="px-3.5 py-2 bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 rounded-xl text-xs font-bold border border-rose-500/30 transition flex items-center gap-1.5">
+                        <i class="w-3.5 h-3.5" data-lucide="trash-2"></i>
+                        <span id="deleteUnitBtnText">Remove Asset</span>
+                    </button>
+                    <button type="button" onclick="saveAssetDetailedChanges()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow transition">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex justify-center items-center p-4 z-50" id="confirmActionModal">
+        <div class="bg-slate-800 rounded-2xl max-w-sm w-full shadow-2xl border border-slate-700 p-6 text-slate-100 space-y-4">
+            <div class="flex items-center gap-3 text-amber-400">
+                <i class="w-6 h-6 shrink-0" data-lucide="alert-triangle"></i>
+                <h3 class="font-bold text-base text-white" id="confirmModalTitle">Confirm Action</h3>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed" id="confirmModalMessage">Are you sure you want to proceed?</p>
+            <div class="flex justify-end gap-2.5 pt-2 border-t border-slate-700">
+                <button onclick="closeModal('confirmActionModal')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl text-xs font-semibold text-white transition">Cancel</button>
+                <button id="confirmModalProceedBtn" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl text-xs font-bold text-white transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxymo1wum7Gg4bxsMweu6IoxxG6BRCzrWVSBws0nuEtLzaLDp3ReC7UU3DG1UPc4zgyYg/exec";
+        const LEGACY_STORAGE_KEY = "fleet_monitoring_ledger_v4";
+        const LOCAL_STORAGE_KEY = "logistics_fleet_monitoring_ledger_v5";
+        const LONG_DOWN_THRESHOLD_DAYS = 7;
+
+        // Date helpers using local calendar date YYYY-MM-DD
+        function getTodayDateString() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function getCurrentMonthString() {
+            return getTodayDateString().slice(0, 7);
+        }
+
+        function getDaysAgoDateString(daysAgo) {
+            const dt = new Date();
+            dt.setHours(0, 0, 0, 0);
+            dt.setDate(dt.getDate() - daysAgo);
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const d = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function calculateDaysBetween(startStr, endStr = null) {
+            if (!startStr) return 0;
+            const sParts = startStr.split('-').map(Number);
+            if (sParts.length !== 3 || sParts.some(isNaN)) return 0;
+            const start = new Date(sParts[0], sParts[1] - 1, sParts[2]);
+
+            let end;
+            if (endStr) {
+                const eParts = endStr.split('-').map(Number);
+                if (eParts.length === 3 && !eParts.some(isNaN)) {
+                    end = new Date(eParts[0], eParts[1] - 1, eParts[2]);
+                }
+            }
+            if (!end) {
+                const now = new Date();
+                end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            }
+
+            const diffMs = end.getTime() - start.getTime();
+            return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+        }
+
+        function calculateDaysDown(downSinceStr) {
+            return calculateDaysBetween(downSinceStr, null);
+        }
+
+        function formatMonthLabel(monthStr) {
+            if (!monthStr || monthStr.length < 7) return "Unknown Month";
+            const [y, m] = monthStr.split('-').map(Number);
+            if (!y || !m) return monthStr;
+            const dt = new Date(y, m - 1, 1);
+            return dt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        }
+
+        function formatFullDateWithMonth(dateStr) {
+            if (!dateStr) return "N/A";
+            const parts = dateStr.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(isNaN)) return dateStr;
+            const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+            return dt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        }
+
+        // Master Category & Equipment Type Definitions
+        const CATEGORY_EQUIPMENT_TYPES = {
+            "HEAVY EQUIPMENT": [
+                "WHEEL TYPE BACKHOE",
+                "CRAWLER BACKHOE",
+                "BULLDOOZER",
+                "ROAD GRADER",
+                "ROAD ROLLER",
+                "CRANE",
+                "FORKLIFT",
+                "WHEEL LOADER"
+            ],
+            "LIGHT EQUIPMENT": [
+                "BOOM TRUCK",
+                "CARGO TRUCK",
+                "STAKE TRUCK",
+                "PRIME MOVER",
+                "DUMP TRUCK",
+                "FUEL DELIVERY TRUCK",
+                "MINI DUMP TRUCK",
+                "PMT"
+            ],
+            "ATTACHMENT": [
+                "LOW BED TRUCK",
+                "HIGH BED TRUCK",
+                "BULK CEMENT TRUCK",
+                "DOLLY",
+                "HYDRAULIC BREAKER",
+                "SHEET PILE DRIVER",
+                "VIBRO HAMMER"
+            ]
+        };
+
+        const TYPE_GROUP_MAP = {
+            // HEAVY EQUIPMENT
+            "WHEEL TYPE BACKHOE": "HEAVY EQUIPMENT",
+            "CRAWLER BACKHOE": "HEAVY EQUIPMENT",
+            "BULLDOOZER": "HEAVY EQUIPMENT",
+            "ROAD GRADER": "HEAVY EQUIPMENT",
+            "ROAD ROLLER": "HEAVY EQUIPMENT",
+            "CRANE": "HEAVY EQUIPMENT",
+            "FORKLIFT": "HEAVY EQUIPMENT",
+            "WHEEL LOADER": "HEAVY EQUIPMENT",
+            // LIGHT EQUIPMENT
+            "BOOM TRUCK": "LIGHT EQUIPMENT",
+            "CARGO TRUCK": "LIGHT EQUIPMENT",
+            "STAKE TRUCK": "LIGHT EQUIPMENT",
+            "PRIME MOVER": "LIGHT EQUIPMENT",
+            "DUMP TRUCK": "LIGHT EQUIPMENT",
+            "FUEL DELIVERY TRUCK": "LIGHT EQUIPMENT",
+            "MINI DUMP TRUCK": "LIGHT EQUIPMENT",
+            "PMT": "LIGHT EQUIPMENT",
+            // ATTACHMENT
+            "LOW BED TRUCK": "ATTACHMENT",
+            "HIGH BED TRUCK": "ATTACHMENT",
+            "BULK CEMENT TRUCK": "ATTACHMENT",
+            "DOLLY": "ATTACHMENT",
+            "HYDRAULIC BREAKER": "ATTACHMENT",
+            "SHEET PILE DRIVER": "ATTACHMENT",
+            "VIBRO HAMMER": "ATTACHMENT"
+        };
+
+        const ORDERED_EQUIPMENT_TYPES = [
+            ...CATEGORY_EQUIPMENT_TYPES["HEAVY EQUIPMENT"],
+            ...CATEGORY_EQUIPMENT_TYPES["LIGHT EQUIPMENT"],
+            ...CATEGORY_EQUIPMENT_TYPES["ATTACHMENT"]
+        ];
+
+        // Default Fleet Baseline Mapped to HEAVY EQUIPMENT, LIGHT EQUIPMENT & ATTACHMENT Categories
+        function buildDefaultFleetState() {
+            const today = getTodayDateString();
+            const yesterday = getDaysAgoDateString(1);
+            const fourDaysAgo = getDaysAgoDateString(4);
+            const sixDaysAgo = getDaysAgoDateString(6);
+            const tenDaysAgo = getDaysAgoDateString(10);
+            const fourteenDaysAgo = getDaysAgoDateString(14);
+            const nineteenDaysAgo = getDaysAgoDateString(19);
+            const thirtyFiveDaysAgo = getDaysAgoDateString(35);
+            const fortyEightDaysAgo = getDaysAgoDateString(48);
+
+            return [
+                // --- HEAVY EQUIPMENT ---
+                { category: "HEAVY EQUIPMENT", type: "WHEEL TYPE BACKHOE", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "CRAWLER BACKHOE", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "BULLDOOZER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "ROAD GRADER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "ROAD ROLLER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "CRANE", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "FORKLIFT", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "HEAVY EQUIPMENT", type: "WHEEL LOADER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+
+                // --- LIGHT EQUIPMENT ---
+                {
+                    category: "LIGHT EQUIPMENT",
+                    type: "BOOM TRUCK",
+                    released: [
+                        { id: "BT-06", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-24", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-29", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-30", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-32", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-36", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-38", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-40", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-47", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-48", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-50", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-63", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "BT-66", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [
+                        { id: "BT-39", completion: 25, location: "GEM Motorpool", downSince: tenDaysAgo, description: "Reported boom hydraulic valve leak" }
+                    ],
+                    ongoing: [
+                        { id: "BT-58", completion: 45, location: "GEM Motorpool", downSince: fourDaysAgo, description: "Outrigger cylinder overhaul" }
+                    ],
+                    restored: [
+                        {
+                            id: "BT-67",
+                            completion: 100,
+                            location: "GEM Motorpool",
+                            repairedDate: today,
+                            wasLongDown: true,
+                            priorDowntimeDays: 12,
+                            description: "Long Down (>7d) resolved: Complete boom winch & PTO overhaul — For Testing"
+                        }
+                    ],
+                    jobout: [],
+                    pms: []
+                },
+                {
+                    category: "LIGHT EQUIPMENT",
+                    type: "CARGO TRUCK",
+                    released: [
+                        { id: "CT-10", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-12", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-24", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-38", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-53", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-61", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-63", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-66", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-67", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-70", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-73", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-74", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-75", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-77", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "CT-78", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [
+                        { id: "CT-59", completion: 15, location: "GEM Motorpool", downSince: sixDaysAgo, description: "Awaiting clutch assembly replacement" }
+                    ],
+                    ongoing: [
+                        { id: "CT-19", completion: 50, location: "GEM Motorpool", downSince: nineteenDaysAgo, description: "Transmission & differential repair" },
+                        { id: "CT-22", completion: 65, location: "GEM Motorpool", downSince: yesterday, description: "Brake chamber & air line service" }
+                    ],
+                    restored: [
+                        {
+                            id: "CT-76",
+                            completion: 100,
+                            location: "GEM Motorpool",
+                            repairedDate: today,
+                            wasLongDown: false,
+                            priorDowntimeDays: 3,
+                            description: "For Testing after brake relining"
+                        },
+                        {
+                            id: "CT-44",
+                            completion: 100,
+                            location: "SV Repair Units",
+                            repairedDate: thirtyFiveDaysAgo,
+                            wasLongDown: true,
+                            priorDowntimeDays: 16,
+                            description: "Long Down (>7d) resolved: Engine top overhaul & radiator replacement — For Testing"
+                        }
+                    ],
+                    jobout: [],
+                    pms: []
+                },
+                {
+                    category: "LIGHT EQUIPMENT",
+                    type: "STAKE TRUCK",
+                    released: [
+                        { id: "ST-60", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [],
+                    ongoing: [],
+                    restored: [],
+                    jobout: [],
+                    pms: []
+                },
+                {
+                    category: "LIGHT EQUIPMENT",
+                    type: "PRIME MOVER",
+                    released: [
+                        { id: "PM-16", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-17", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-20", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-23", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-24", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-29", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-30", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-31", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-32", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-34", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-35", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "PM-37", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [
+                        { id: "PM-33", completion: 20, location: "GEM Motorpool", downSince: fourDaysAgo, description: "Reported turbocharger boost sensor fault" }
+                    ],
+                    ongoing: [
+                        { id: "PM-19", completion: 40, location: "GEM Motorpool", downSince: fourteenDaysAgo, description: "Fifth-wheel & suspension overhaul" }
+                    ],
+                    restored: [
+                        {
+                            id: "PM-36",
+                            completion: 100,
+                            location: "GEM Motorpool",
+                            repairedDate: yesterday,
+                            wasLongDown: true,
+                            priorDowntimeDays: 11,
+                            description: "Long Down (>7d) resolved: High-pressure fuel pump & injector calibration — For Testing"
+                        }
+                    ],
+                    jobout: [],
+                    pms: []
+                },
+                { category: "LIGHT EQUIPMENT", type: "DUMP TRUCK", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "LIGHT EQUIPMENT", type: "FUEL DELIVERY TRUCK", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "LIGHT EQUIPMENT", type: "MINI DUMP TRUCK", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "LIGHT EQUIPMENT", type: "PMT", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+
+                // --- ATTACHMENT ---
+                {
+                    category: "ATTACHMENT",
+                    type: "LOW BED TRUCK",
+                    released: [
+                        { id: "LBT-10", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "LBT-16", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "LBT-19", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "LBT-24", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "LBT-25", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [],
+                    ongoing: [
+                        { id: "LBT-01", completion: 85, location: "GEM Motorpool", downSince: tenDaysAgo, description: "Hydraulic ramp cylinder rebuild" },
+                        { id: "LBT-17", completion: 70, location: "GEM Motorpool", downSince: fourDaysAgo, description: "Axle bearing & brake shoe replacement" }
+                    ],
+                    restored: [
+                        {
+                            id: "LBT-12",
+                            completion: 100,
+                            location: "GEM Motorpool",
+                            repairedDate: fortyEightDaysAgo,
+                            wasLongDown: true,
+                            priorDowntimeDays: 14,
+                            description: "Long Down (>7d) resolved: Gooseneck structural welding & hydraulic line replacement — For Testing"
+                        }
+                    ],
+                    jobout: [],
+                    pms: []
+                },
+                {
+                    category: "ATTACHMENT",
+                    type: "HIGH BED TRUCK",
+                    released: [
+                        { id: "HBT-07", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-08", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-09", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-15", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-18", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-20", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-21", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-22", completion: 100, location: "GEM Motorpool", description: "Operational" },
+                        { id: "HBT-23", completion: 100, location: "GEM Motorpool", description: "Operational" }
+                    ],
+                    waiting: [],
+                    ongoing: [],
+                    restored: [],
+                    jobout: [],
+                    pms: []
+                },
+                {
+                    category: "ATTACHMENT",
+                    type: "BULK CEMENT TRUCK",
+                    released: [
+                        { id: "BCT-04", completion: 100, location: "Los Amigos Motorpool", description: "Operational" },
+                        { id: "BCT-07", completion: 100, location: "Los Amigos Motorpool", description: "Operational" }
+                    ],
+                    waiting: [
+                        { id: "BCT-05", completion: 30, location: "Los Amigos Motorpool", downSince: fourDaysAgo, description: "Awaiting pneumatic discharge valve" }
+                    ],
+                    ongoing: [],
+                    restored: [],
+                    jobout: [],
+                    pms: []
+                },
+                { category: "ATTACHMENT", type: "DOLLY", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "ATTACHMENT", type: "HYDRAULIC BREAKER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "ATTACHMENT", type: "SHEET PILE DRIVER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] },
+                { category: "ATTACHMENT", type: "VIBRO HAMMER", released: [], waiting: [], ongoing: [], restored: [], jobout: [], pms: [] }
+            ];
+        }
+
+        let state = [];
+        let activeStatusFilter = "all"; // 'all' | 'available' | 'reported' | 'down' | 'restored'
+        let filterOnlyLongDown = false;
+        let highlightedEquipmentType = null;
+        let addEntryMode = "single"; // 'single' | 'bulk'
+        let activeManageState = { category: "", type: "", unitCode: "", stateKey: "", unitObj: null };
+        let deleteConfirmPending = false;
+
+        // Section 1 state: Repaired & For Testing Assets (Daily & Monthly)
+        let repairedFilterMode = "month"; // 'date' | 'month' | 'all'
+        let selectedRepairedDate = getTodayDateString();
+        let selectedRepairedMonth = getCurrentMonthString();
+        let filterRepairedOnlyLongDown = false;
+
+        // Section 2 state: Long Down (>7d) & Running Repair filter
+        let repairSectionFilter = "all"; // 'all' | 'long_down' | 'running'
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('locationFilter').addEventListener('change', renderDashboard);
+            document.getElementById('repairedDateInput').value = selectedRepairedDate;
+            document.getElementById('repairedMonthInput').value = selectedRepairedMonth;
+            syncRepairedModeUI();
+            await fetchSheetData();
+            lucide.createIcons();
+        });
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = {
+                success: "bg-emerald-900/95 border-emerald-500 text-emerald-100",
+                error: "bg-rose-900/95 border-rose-500 text-rose-100",
+                info: "bg-slate-900/95 border-blue-500 text-slate-100"
+            };
+            toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl text-xs font-semibold flex items-center gap-2.5 transition-all duration-300 ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3400);
+        }
+
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+            const proceedBtn = document.getElementById('confirmModalProceedBtn');
+            proceedBtn.onclick = async () => {
+                closeModal('confirmActionModal');
+                await onConfirm();
+            };
+            openModal('confirmActionModal');
+            lucide.createIcons();
+        }
+
+        function inferAttachmentTypeFromId(id) {
+            const upper = (id || "").toUpperCase();
+            if (upper.startsWith("LBT")) return "LOW BED TRUCK";
+            if (upper.startsWith("HBT")) return "HIGH BED TRUCK";
+            if (upper.startsWith("BCT")) return "BULK CEMENT TRUCK";
+            if (upper.startsWith("DLY") || upper.startsWith("DL")) return "DOLLY";
+            if (upper.startsWith("HB-")) return "HYDRAULIC BREAKER";
+            if (upper.startsWith("SPD")) return "SHEET PILE DRIVER";
+            if (upper.startsWith("VH")) return "VIBRO HAMMER";
+            return "LOW BED TRUCK";
+        }
+
+        function migrateLegacyRecords(rawState) {
+            const defaults = buildDefaultFleetState();
+            const migratedMap = new Map();
+
+            defaults.forEach(defRow => {
+                migratedMap.set(defRow.type, {
+                    category: defRow.category,
+                    type: defRow.type,
+                    released: [],
+                    restored: [],
+                    waiting: [],
+                    pms: [],
+                    ongoing: [],
+                    jobout: []
+                });
+            });
+
+            rawState.forEach(row => {
+                const buckets = ['released', 'restored', 'waiting', 'pms', 'ongoing', 'jobout'];
+                if (row.type === "ATTACHMENTS") {
+                    buckets.forEach(bKey => {
+                        (row[bKey] || []).forEach(u => {
+                            const specificType = inferAttachmentTypeFromId(u.id);
+                            if (!migratedMap.has(specificType)) {
+                                migratedMap.set(specificType, {
+                                    category: "ATTACHMENT",
+                                    type: specificType,
+                                    released: [], restored: [], waiting: [], pms: [], ongoing: [], jobout: []
+                                });
+                            }
+                            migratedMap.get(specificType)[bKey].push(u);
+                        });
+                    });
+                } else {
+                    const mappedCat = TYPE_GROUP_MAP[row.type] || (row.category === "Prime Equipment" ? "LIGHT EQUIPMENT" : (row.category === "Others" ? "ATTACHMENT" : row.category)) || "LIGHT EQUIPMENT";
+                    if (!migratedMap.has(row.type)) {
+                        migratedMap.set(row.type, {
+                            category: mappedCat,
+                            type: row.type,
+                            released: [], restored: [], waiting: [], pms: [], ongoing: [], jobout: []
+                        });
+                    }
+                    const targetRow = migratedMap.get(row.type);
+                    targetRow.category = mappedCat;
+                    buckets.forEach(bKey => {
+                        (row[bKey] || []).forEach(u => {
+                            if (!targetRow[bKey].some(existing => existing.id === u.id)) {
+                                targetRow[bKey].push(u);
+                            }
+                        });
+                    });
+                }
+            });
+
+            return Array.from(migratedMap.values());
+        }
+
+        function ensureStateIntegrity() {
+            const today = getTodayDateString();
+            const fourDaysAgo = getDaysAgoDateString(4);
+
+            Object.entries(CATEGORY_EQUIPMENT_TYPES).forEach(([cat, types]) => {
+                types.forEach(t => {
+                    let existing = state.find(r => r.type === t);
+                    if (!existing) {
+                        state.push({
+                            category: cat,
+                            type: t,
+                            released: [],
+                            waiting: [],
+                            ongoing: [],
+                            restored: [],
+                            jobout: [],
+                            pms: []
+                        });
+                    } else {
+                        existing.category = cat;
+                    }
+                });
+            });
+
+            state.forEach(row => {
+                if (!row.category) row.category = TYPE_GROUP_MAP[row.type] || "LIGHT EQUIPMENT";
+                if (!row.released) row.released = [];
+                if (!row.restored) row.restored = [];
+                if (!row.waiting) row.waiting = [];
+                if (!row.pms) row.pms = [];
+                if (!row.ongoing) row.ongoing = [];
+                if (!row.jobout) row.jobout = [];
+
+                // Ensure For Testing items have repairedDate & Long Down resolution metadata
+                row.restored.forEach(u => {
+                    if (!u.repairedDate) {
+                        u.repairedDate = today;
+                    }
+                    if (typeof u.priorDowntimeDays !== 'number') {
+                        u.priorDowntimeDays = u.downSince ? calculateDaysBetween(u.downSince, u.repairedDate) : 0;
+                    }
+                    if (typeof u.wasLongDown !== 'boolean') {
+                        u.wasLongDown = u.priorDowntimeDays > LONG_DOWN_THRESHOLD_DAYS;
+                    }
+                    delete u.downSince;
+                });
+
+                // Ensure operational items are not flagged as down; preserve repaired log metadata if promoted from For Testing
+                row.released.forEach(u => {
+                    delete u.downSince;
+                    if (u.isRepaired) {
+                        if (!u.repairedDate) {
+                            u.repairedDate = today;
+                        }
+                        if (typeof u.priorDowntimeDays !== 'number') {
+                            u.priorDowntimeDays = 0;
+                        }
+                        if (typeof u.wasLongDown !== 'boolean') {
+                            u.wasLongDown = u.priorDowntimeDays > LONG_DOWN_THRESHOLD_DAYS;
+                        }
+                    }
+                });
+
+                // Ensure down/reported items have a downSince date so >7d auto-flag works reliably
+                ['waiting', 'pms', 'ongoing', 'jobout'].forEach(key => {
+                    (row[key] || []).forEach(u => {
+                        if (!u.downSince) {
+                            u.downSince = fourDaysAgo;
+                        }
+                    });
+                });
+            });
+        }
+
+        async function fetchSheetData() {
+            const badge = document.getElementById('syncStatusBadge');
+            try {
+                badge.textContent = "Syncing...";
+                const cached = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+                if (cached) {
+                    state = migrateLegacyRecords(JSON.parse(cached));
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+                    badge.textContent = "Fleet Ledger Loaded";
+                } else {
+                    const response = await fetch(GOOGLE_SCRIPT_URL);
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0 && data.some(r => r.type === "BOOM TRUCK" && (r.released?.some(u => u.id === "BT-06")))) {
+                        state = migrateLegacyRecords(data);
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+                        badge.textContent = "Google Sheet Connected";
+                    } else {
+                        state = buildDefaultFleetState();
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+                        badge.textContent = "Fleet Ledger Ready";
+                    }
+                }
+            } catch (e) {
+                console.warn("Unable to fetch from Sheet DB, utilizing local persistence/default state.", e);
+                const cached = localStorage.getItem(LOCAL_STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
+                state = cached ? migrateLegacyRecords(JSON.parse(cached)) : buildDefaultFleetState();
+                badge.textContent = "Local Persistence Active";
+            }
+            ensureStateIntegrity();
+            populateDynamicEquipmentTypes();
+            renderDashboard();
+        }
+
+        async function saveToSheet() {
+            const badge = document.getElementById('syncStatusBadge');
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+                badge.textContent = "Saving...";
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state)
+                });
+                badge.textContent = "Synced & Saved";
+            } catch (e) {
+                console.error("Failed to commit updates to Google Sheets:", e);
+                badge.textContent = "Saved Locally";
+            }
+        }
+
+        function resetToDefaults() {
+            openConfirmModal(
+                "Reset LOGISTICS FLEET MONITORING",
+                "Reset all asset numbers, categories, repair dates, monthly logs, downtime timestamps, and LED statuses back to the default logistics fleet monitoring baseline?",
+                async () => {
+                    localStorage.removeItem(LOCAL_STORAGE_KEY);
+                    localStorage.removeItem(LEGACY_STORAGE_KEY);
+                    state = buildDefaultFleetState();
+                    activeStatusFilter = "all";
+                    filterOnlyLongDown = false;
+                    highlightedEquipmentType = null;
+                    repairSectionFilter = "all";
+                    repairedFilterMode = "month";
+                    filterRepairedOnlyLongDown = false;
+                    selectedRepairedDate = getTodayDateString();
+                    selectedRepairedMonth = getCurrentMonthString();
+                    document.getElementById('repairedDateInput').value = selectedRepairedDate;
+                    document.getElementById('repairedMonthInput').value = selectedRepairedMonth;
+                    syncRepairedModeUI();
+                    ensureStateIntegrity();
+                    populateDynamicEquipmentTypes();
+                    updateFilterUI();
+                    renderDashboard();
+                    await saveToSheet();
+                    showToast("Logistics Fleet Monitoring reset to default baseline.", "success");
+                }
+            );
+        }
+
+        function getMemsStatusFromStateKey(stateKey) {
+            if (stateKey === 'released') return 'available';
+            if (stateKey === 'restored') return 'restored';
+            if (stateKey === 'waiting' || stateKey === 'pms') return 'reported';
+            return 'down'; // ongoing or jobout
+        }
+
+        function getMemsStatusLabel(memsStatus) {
+            const labels = {
+                available: "Operational",
+                reported: "Reported",
+                down: "Down",
+                restored: "For Testing"
+            };
+            return labels[memsStatus] || "Operational";
+        }
+
+        function toggleStatusFilter(status) {
+            activeStatusFilter = (activeStatusFilter === status) ? "all" : status;
+            updateFilterUI();
+            renderDashboard();
+        }
+
+        function toggleLongDownFilter() {
+            filterOnlyLongDown = !filterOnlyLongDown;
+            updateFilterUI();
+            renderDashboard();
+        }
+
+        function toggleTypeHighlight(equipType) {
+            highlightedEquipmentType = (highlightedEquipmentType === equipType) ? null : equipType;
+            updateFilterUI();
+            renderDashboard();
+        }
+
+        function clearAllFilters() {
+            activeStatusFilter = "all";
+            filterOnlyLongDown = false;
+            highlightedEquipmentType = null;
+            document.getElementById('searchInput').value = '';
+            document.getElementById('locationFilter').value = 'All Motorpools';
+            updateFilterUI();
+            renderDashboard();
+        }
+
+        function updateFilterUI() {
+            ['available', 'reported', 'down', 'restored'].forEach(st => {
+                const el = document.getElementById(`legend-${st}`);
+                if (!el) return;
+                if (activeStatusFilter === st) {
+                    el.classList.add('active-filter');
+                } else {
+                    el.classList.remove('active-filter');
+                }
+            });
+
+            const longDownBtn = document.getElementById('legend-longdown');
+            if (longDownBtn) {
+                if (filterOnlyLongDown) longDownBtn.classList.add('active-filter');
+                else longDownBtn.classList.remove('active-filter');
+            }
+
+            const clearBtn = document.getElementById('clearFiltersBtn');
+            const highlightTag = document.getElementById('activeHighlightTag');
+            const hasSearch = document.getElementById('searchInput').value.trim() !== '';
+            const hasLocation = document.getElementById('locationFilter').value !== 'All Motorpools';
+
+            if (activeStatusFilter !== 'all' || filterOnlyLongDown || highlightedEquipmentType || hasSearch || hasLocation) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            const tags = [];
+            if (highlightedEquipmentType) tags.push(`Type: ${highlightedEquipmentType}`);
+            if (filterOnlyLongDown) tags.push(`Auto-Flag: Long Down >${LONG_DOWN_THRESHOLD_DAYS}d`);
+
+            if (tags.length > 0) {
+                highlightTag.textContent = tags.join(" • ");
+                highlightTag.classList.remove('hidden');
+            } else {
+                highlightTag.classList.add('hidden');
+            }
+        }
+
+        function renderDashboard() {
+            ensureStateIntegrity();
+            updateFilterUI();
+
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
+            const locationVal = document.getElementById('locationFilter').value;
+
+            let totalAvailable = 0;
+            let totalReported = 0;
+            let totalDown = 0;
+            let totalRestored = 0;
+            let totalLongDownCount = 0;
+
+            const allUnitCards = [];
+            const allRepairedEntries = [];
+            const allActiveRepairEntries = [];
+
+            state.forEach(row => {
+                const buckets = [
+                    { key: 'released', list: row.released || [], memsStatus: 'available' },
+                    { key: 'restored', list: row.restored || [], memsStatus: 'restored' },
+                    { key: 'waiting', list: row.waiting || [], memsStatus: 'reported' },
+                    { key: 'pms', list: row.pms || [], memsStatus: 'reported' },
+                    { key: 'ongoing', list: row.ongoing || [], memsStatus: 'down' },
+                    { key: 'jobout', list: row.jobout || [], memsStatus: 'down' }
+                ];
+
+                buckets.forEach(bucket => {
+                    bucket.list.forEach(u => {
+                        const unitLoc = u.location || "GEM Motorpool";
+                        if (locationVal !== "All Motorpools" && unitLoc !== locationVal) return;
+
+                        const isActiveRepair = (bucket.memsStatus === 'down' || bucket.memsStatus === 'reported');
+                        const daysDown = isActiveRepair ? calculateDaysDown(u.downSince) : 0;
+                        const isLongDown = isActiveRepair && (daysDown > LONG_DOWN_THRESHOLD_DAYS);
+
+                        if (bucket.memsStatus === 'available') totalAvailable++;
+                        else if (bucket.memsStatus === 'reported') totalReported++;
+                        else if (bucket.memsStatus === 'down') totalDown++;
+                        else if (bucket.memsStatus === 'restored') totalRestored++;
+
+                        if (isLongDown) totalLongDownCount++;
+
+                        const repDate = u.repairedDate || '';
+                        const repMonth = repDate.length >= 7 ? repDate.slice(0, 7) : '';
+                        const priorDowntimeDays = typeof u.priorDowntimeDays === 'number' ? u.priorDowntimeDays : 0;
+                        const wasLongDown = Boolean(u.wasLongDown) || priorDowntimeDays > LONG_DOWN_THRESHOLD_DAYS;
+                        const isRepairedOperational = (bucket.memsStatus === 'available' && Boolean(u.isRepaired));
+
+                        const record = {
+                            id: u.id,
+                            type: row.type,
+                            category: row.category,
+                            location: unitLoc,
+                            stateKey: bucket.key,
+                            memsStatus: bucket.memsStatus,
+                            completion: u.completion ?? (bucket.memsStatus === 'available' || bucket.memsStatus === 'restored' ? 100 : 0),
+                            description: u.description || '',
+                            targetDate: u.targetDate || '',
+                            downSince: u.downSince || '',
+                            daysDown,
+                            isLongDown,
+                            repairedDate: repDate,
+                            repairedMonth: repMonth,
+                            wasLongDown,
+                            priorDowntimeDays,
+                            isRepaired: Boolean(u.isRepaired),
+                            isRepairedOperational
+                        };
+
+                        // Collect For Testing (Blue LED) AND Repaired Operational (promoted from For Testing -> Operational) for Section 1
+                        if (bucket.memsStatus === 'restored' || isRepairedOperational) {
+                            allRepairedEntries.push(record);
+                        }
+
+                        // Collect Long Down & Running Repair records for Section 2
+                        if (isActiveRepair) {
+                            allActiveRepairEntries.push(record);
+                        }
+
+                        // Apply LED Wall filters
+                        if (activeStatusFilter !== 'all' && bucket.memsStatus !== activeStatusFilter) return;
+                        if (filterOnlyLongDown && !isLongDown) return;
+
+                        if (searchVal) {
+                            const matchId = u.id.toLowerCase().includes(searchVal);
+                            const matchType = row.type.toLowerCase().includes(searchVal);
+                            const matchCat = (row.category || '').toLowerCase().includes(searchVal);
+                            const matchDesc = (u.description || '').toLowerCase().includes(searchVal);
+                            if (!matchId && !matchType && !matchCat && !matchDesc) return;
+                        }
+
+                        allUnitCards.push(record);
+                    });
+                });
+            });
+
+            document.getElementById('count-pill-available').textContent = totalAvailable;
+            document.getElementById('count-pill-reported').textContent = totalReported;
+            document.getElementById('count-pill-down').textContent = totalDown;
+            document.getElementById('count-pill-restored').textContent = totalRestored;
+            document.getElementById('count-pill-longdown').textContent = totalLongDownCount;
+
+            const wallFlagBadge = document.getElementById('wallLongDownFlagBadge');
+            if (totalLongDownCount > 0) {
+                wallFlagBadge.textContent = `${totalLongDownCount} Auto-Flagged >7d Down`;
+                wallFlagBadge.classList.remove('hidden');
+            } else {
+                wallFlagBadge.classList.add('hidden');
+            }
+
+            const grandUnitsCount = totalAvailable + totalReported + totalDown + totalRestored;
+            document.getElementById('totalMonitoredBadge').textContent = `${grandUnitsCount} Unit${grandUnitsCount === 1 ? '' : 's'} Monitored`;
+
+            renderMemsTileWall(allUnitCards);
+            renderMemsSummaryTable(state, locationVal);
+            renderRepairedSection(allRepairedEntries, searchVal);
+            renderLongDownRunningRepairSection(allActiveRepairEntries, searchVal);
+            lucide.createIcons();
+        }
+
+        function showUnitTooltip(e, card) {
+            const tooltip = document.getElementById('unitHoverTooltip');
+            document.getElementById('ttAssetCode').textContent = card.id;
+            document.getElementById('ttCategory').textContent = card.category;
+            document.getElementById('ttEquipType').textContent = card.type;
+            document.getElementById('ttLocation').textContent = card.location;
+            document.getElementById('ttCompletion').textContent = `${card.completion}%`;
+            document.getElementById('ttNotes').textContent = card.description || "Operational / No fault remarks";
+
+            const longDownFlag = document.getElementById('ttLongDownFlag');
+            const downtimeRow = document.getElementById('ttDowntimeRow');
+            const downtimeVal = document.getElementById('ttDowntime');
+            const repairedRow = document.getElementById('ttRepairedDateRow');
+            const repairedVal = document.getElementById('ttRepairedDate');
+
+            if (card.memsStatus === 'down' || card.memsStatus === 'reported') {
+                downtimeRow.classList.remove('hidden');
+                downtimeVal.textContent = `${card.daysDown} day${card.daysDown === 1 ? '' : 's'} (since ${card.downSince || 'N/A'})`;
+                if (card.isLongDown) {
+                    longDownFlag.classList.remove('hidden');
+                    downtimeVal.className = "font-black text-rose-400 text-right";
+                } else {
+                    longDownFlag.classList.add('hidden');
+                    downtimeVal.className = "font-bold text-amber-300 text-right";
+                }
+            } else {
+                longDownFlag.classList.add('hidden');
+                downtimeRow.classList.add('hidden');
+            }
+
+            if ((card.memsStatus === 'restored' || card.isRepairedOperational) && card.repairedDate) {
+                repairedRow.classList.remove('hidden');
+                repairedVal.textContent = `${formatFullDateWithMonth(card.repairedDate)} (${card.repairedDate})${card.wasLongDown ? ' • Was >7d Down' : ''}`;
+            } else {
+                repairedRow.classList.add('hidden');
+            }
+
+            const badge = document.getElementById('ttStatusBadge');
+            badge.textContent = card.isRepairedOperational ? "Operational (Repaired)" : getMemsStatusLabel(card.memsStatus);
+            const badgeStyles = {
+                available: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40",
+                reported: "bg-amber-500/20 text-amber-300 border border-amber-500/40",
+                down: "bg-rose-500/20 text-rose-300 border border-rose-500/40",
+                restored: "bg-blue-500/20 text-blue-300 border border-blue-500/40"
+            };
+            badge.className = `px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${badgeStyles[card.memsStatus] || badgeStyles.available}`;
+
+            tooltip.classList.remove('hidden');
+            moveUnitTooltip(e);
+        }
+
+        function moveUnitTooltip(e) {
+            const tooltip = document.getElementById('unitHoverTooltip');
+            if (tooltip.classList.contains('hidden')) return;
+            const offset = 14;
+            let left = e.clientX + offset;
+            let top = e.clientY + offset;
+            if (left + 295 > window.innerWidth) left = e.clientX - 300;
+            if (top + 215 > window.innerHeight) top = e.clientY - 220;
+            tooltip.style.left = `${Math.max(8, left)}px`;
+            tooltip.style.top = `${Math.max(8, top)}px`;
+        }
+
+        function hideUnitTooltip() {
+            document.getElementById('unitHoverTooltip').classList.add('hidden');
+        }
+
+        function renderMemsTileWall(cards) {
+            const container = document.getElementById('memsTileColumnsContainer');
+            const emptyMsg = document.getElementById('emptyWallMessage');
+            container.innerHTML = '';
+
+            if (cards.length === 0) {
+                emptyMsg.classList.remove('hidden');
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+
+            cards.sort((a, b) => {
+                const idxA = ORDERED_EQUIPMENT_TYPES.indexOf(a.type);
+                const idxB = ORDERED_EQUIPMENT_TYPES.indexOf(b.type);
+                const pA = idxA !== -1 ? idxA : 999;
+                const pB = idxB !== -1 ? idxB : 999;
+                if (pA !== pB) return pA - pB;
+                if (a.type !== b.type) return a.type.localeCompare(b.type);
+                return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            const numCols = 10;
+            const itemsPerCol = Math.ceil(cards.length / numCols);
+
+            for (let c = 0; c < numCols; c++) {
+                const colSlice = cards.slice(c * itemsPerCol, (c + 1) * itemsPerCol);
+                if (colSlice.length === 0) continue;
+
+                const colDiv = document.createElement('div');
+                colDiv.className = "flex flex-col gap-2";
+
+                colSlice.forEach(card => {
+                    const isHighlighted = highlightedEquipmentType === card.type;
+                    const dimmed = highlightedEquipmentType && !isHighlighted ? 'opacity-30' : '';
+                    const highlightCls = isHighlighted ? 'highlighted-type' : '';
+                    const longDownCls = card.isLongDown ? 'long-down-flagged' : '';
+
+                    const btn = document.createElement('button');
+                    btn.type = "button";
+                    btn.onmouseenter = (e) => showUnitTooltip(e, card);
+                    btn.onmousemove = (e) => moveUnitTooltip(e);
+                    btn.onmouseleave = () => hideUnitTooltip();
+                    btn.onclick = () => {
+                        hideUnitTooltip();
+                        openManageModal(card.category, card.type, card.id, card.stateKey);
+                    };
+                    btn.className = `mems-unit-pill w-full px-2.5 py-1.5 flex items-center justify-between gap-1 text-left cursor-pointer ${longDownCls} ${highlightCls} ${dimmed}`;
+
+                    const longDownBadgeHtml = card.isLongDown
+                        ? `<span title="Long Down Repair: ${card.daysDown} days down (>7 days)" class="text-[9px] font-black px-1 py-0.2 rounded bg-rose-600 text-white leading-tight shrink-0">${card.daysDown}d!</span>`
+                        : '';
+
+                    btn.innerHTML = `
+                        <span class="font-mono text-[11px] sm:text-xs font-bold text-slate-100 tracking-wide truncate">${card.id}</span>
+                        <span class="flex items-center gap-1 shrink-0">
+                            ${longDownBadgeHtml}
+                            <span class="led-sphere led-${card.memsStatus}"></span>
+                        </span>
+                    `;
+                    colDiv.appendChild(btn);
+                });
+
+                container.appendChild(colDiv);
+            }
+        }
+
+        function renderMemsSummaryTable(rows, locationVal = "All Motorpools") {
+            const tbody = document.getElementById('memsSummaryTableBody');
+            tbody.innerHTML = '';
+
+            const groups = [
+                { name: "HEAVY EQUIPMENT", subtotalLabel: "HEAVY EQUIPMENT TOTAL" },
+                { name: "LIGHT EQUIPMENT", subtotalLabel: "LIGHT EQUIPMENT TOTAL" },
+                { name: "ATTACHMENT", subtotalLabel: "ATTACHMENT TOTAL" }
+            ];
+
+            let grandTotalUnits = 0;
+            let grandTotalAvailable = 0;
+            let grandTotalDown = 0;
+
+            groups.forEach(group => {
+                const canonicalOrder = CATEGORY_EQUIPMENT_TYPES[group.name] || [];
+                const groupRows = rows
+                    .filter(r => r.category === group.name)
+                    .sort((a, b) => {
+                        const iA = canonicalOrder.indexOf(a.type);
+                        const iB = canonicalOrder.indexOf(b.type);
+                        return (iA === -1 ? 999 : iA) - (iB === -1 ? 999 : iB);
+                    });
+
+                if (groupRows.length === 0) return;
+
+                let subUnits = 0;
+                let subAvailable = 0;
+                let subDown = 0;
+
+                groupRows.forEach((row, idx) => {
+                    const filterLoc = (arr) => (arr || []).filter(u => locationVal === "All Motorpools" || (u.location || "GEM Motorpool") === locationVal);
+
+                    const availableCount = filterLoc(row.released).length + filterLoc(row.restored).length;
+                    const downCount = filterLoc(row.ongoing).length + filterLoc(row.jobout).length + filterLoc(row.waiting).length + filterLoc(row.pms).length;
+                    const totalUnits = availableCount + downCount;
+                    const availPct = totalUnits > 0 ? ((availableCount / totalUnits) * 100).toFixed(2) : "0.00";
+
+                    subUnits += totalUnits;
+                    subAvailable += availableCount;
+                    subDown += downCount;
+
+                    const tr = document.createElement('tr');
+                    const isSelected = highlightedEquipmentType === row.type;
+                    tr.className = `data-row transition ${isSelected ? 'selected-row' : ''}`;
+                    tr.onclick = () => toggleTypeHighlight(row.type);
+
+                    let categoryCellHtml = '';
+                    if (idx === 0) {
+                        categoryCellHtml = `<td rowspan="${groupRows.length}" class="category-cell align-top font-extrabold text-slate-900 bg-[#d8dce3] select-none tracking-wide">${group.name}</td>`;
+                    }
+
+                    tr.innerHTML = `
+                        ${categoryCellHtml}
+                        <td class="font-semibold">${row.type}</td>
+                        <td class="text-center font-bold">${totalUnits}</td>
+                        <td class="text-center font-bold text-emerald-800">${availableCount}</td>
+                        <td class="text-center font-bold text-rose-800">${downCount}</td>
+                        <td class="text-center font-extrabold">${availPct}%</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+                grandTotalUnits += subUnits;
+                grandTotalAvailable += subAvailable;
+                grandTotalDown += subDown;
+
+                const subAvailPct = subUnits > 0 ? ((subAvailable / subUnits) * 100).toFixed(2) : "0.00";
+                const subTr = document.createElement('tr');
+                subTr.className = "subtotal-row";
+                subTr.innerHTML = `
+                    <td>${group.subtotalLabel}</td>
+                    <td>${group.subtotalLabel}</td>
+                    <td class="text-center">${subUnits}</td>
+                    <td class="text-center">${subAvailable}</td>
+                    <td class="text-center">${subDown}</td>
+                    <td class="text-center">${subAvailPct}%</td>
+                `;
+                tbody.appendChild(subTr);
+            });
+
+            const grandAvailPct = grandTotalUnits > 0 ? ((grandTotalAvailable / grandTotalUnits) * 100).toFixed(2) : "0.00";
+            const grandTr = document.createElement('tr');
+            grandTr.className = "grandtotal-row";
+            grandTr.innerHTML = `
+                <td>GRAND TOTAL</td>
+                <td>GRAND TOTAL</td>
+                <td class="text-center">${grandTotalUnits}</td>
+                <td class="text-center">${grandTotalAvailable}</td>
+                <td class="text-center">${grandTotalDown}</td>
+                <td class="text-center">${grandAvailPct}%</td>
+            `;
+            tbody.appendChild(grandTr);
+        }
+
+        // Section 1: Repaired / For Testing Assets (Specific Date & Monthly)
+        function setRepairedFilterMode(mode) {
+            repairedFilterMode = mode;
+            syncRepairedModeUI();
+            renderDashboard();
+        }
+
+        function syncRepairedModeUI() {
+            const btnDate = document.getElementById('repModeDateBtn');
+            const btnMonth = document.getElementById('repModeMonthBtn');
+            const btnAll = document.getElementById('repModeAllBtn');
+            const dateWrap = document.getElementById('repairedDatePickerWrap');
+            const monthWrap = document.getElementById('repairedMonthPickerWrap');
+            const currentBtn = document.getElementById('repairedQuickCurrentBtn');
+            const onlyLongBtn = document.getElementById('repOnlyLongDownBtn');
+
+            btnDate.className = repairedFilterMode === 'date'
+                ? "px-2.5 py-1 rounded-md text-xs font-bold bg-blue-600 text-white transition"
+                : "px-2.5 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition";
+
+            btnMonth.className = repairedFilterMode === 'month'
+                ? "px-2.5 py-1 rounded-md text-xs font-bold bg-amber-500 text-slate-950 transition"
+                : "px-2.5 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition";
+
+            btnAll.className = repairedFilterMode === 'all'
+                ? "px-2.5 py-1 rounded-md text-xs font-bold bg-emerald-600 text-white transition"
+                : "px-2.5 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition";
+
+            if (repairedFilterMode === 'date') {
+                dateWrap.classList.remove('hidden');
+                monthWrap.classList.add('hidden');
+                currentBtn.classList.remove('hidden');
+                currentBtn.textContent = "Today";
+            } else if (repairedFilterMode === 'month') {
+                dateWrap.classList.add('hidden');
+                monthWrap.classList.remove('hidden');
+                currentBtn.classList.remove('hidden');
+                currentBtn.textContent = "This Month";
+            } else {
+                dateWrap.classList.add('hidden');
+                monthWrap.classList.add('hidden');
+                currentBtn.classList.add('hidden');
+            }
+
+            onlyLongBtn.className = filterRepairedOnlyLongDown
+                ? "px-3 py-1.5 bg-rose-600 text-white border border-rose-400 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 shadow"
+                : "px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-rose-500/40 rounded-lg text-xs font-bold transition flex items-center gap-1.5";
+        }
+
+        function handleRepairedDateChange() {
+            const val = document.getElementById('repairedDateInput').value;
+            if (val) {
+                selectedRepairedDate = val;
+                selectedRepairedMonth = val.slice(0, 7);
+                document.getElementById('repairedMonthInput').value = selectedRepairedMonth;
+                repairedFilterMode = 'date';
+                syncRepairedModeUI();
+                renderDashboard();
+            }
+        }
+
+        function handleRepairedMonthChange() {
+            const val = document.getElementById('repairedMonthInput').value;
+            if (val) {
+                selectedRepairedMonth = val;
+                repairedFilterMode = 'month';
+                syncRepairedModeUI();
+                renderDashboard();
+            }
+        }
+
+        function selectMonthFromSummaryCard(monthStr) {
+            selectedRepairedMonth = monthStr;
+            document.getElementById('repairedMonthInput').value = monthStr;
+            repairedFilterMode = 'month';
+            syncRepairedModeUI();
+            renderDashboard();
+        }
+
+        function setRepairedToCurrent() {
+            if (repairedFilterMode === 'month') {
+                selectedRepairedMonth = getCurrentMonthString();
+                document.getElementById('repairedMonthInput').value = selectedRepairedMonth;
+            } else {
+                selectedRepairedDate = getTodayDateString();
+                selectedRepairedMonth = getCurrentMonthString();
+                document.getElementById('repairedDateInput').value = selectedRepairedDate;
+                document.getElementById('repairedMonthInput').value = selectedRepairedMonth;
+                repairedFilterMode = 'date';
+            }
+            syncRepairedModeUI();
+            renderDashboard();
+        }
+
+        function toggleRepairedOnlyLongDown() {
+            filterRepairedOnlyLongDown = !filterRepairedOnlyLongDown;
+            syncRepairedModeUI();
+            renderDashboard();
+        }
+
+        function renderRepairedSection(allRepaired, searchVal = "") {
+            const tbody = document.getElementById('repairedByDateTableBody');
+            const emptyBox = document.getElementById('emptyRepairedDateMessage');
+            const emptyTitle = document.getElementById('emptyRepairedTitle');
+            const countBadge = document.getElementById('repairedCountBadge');
+            const repairedOpBadge = document.getElementById('repairedOperationalCountBadge');
+            const longDownResolvedBadge = document.getElementById('repairedLongDownResolvedBadge');
+            const monthlyListContainer = document.getElementById('monthlyRepairedSummaryList');
+            const spotlightTitle = document.getElementById('longDownRepairedSpotlightTitle');
+            const spotlightCount = document.getElementById('longDownSpotlightCount');
+            const spotlightGrid = document.getElementById('longDownRepairedSpotlightGrid');
+            const emptySpotlightMsg = document.getElementById('emptyLongDownSpotlightMsg');
+
+            // Base filtered by Equipment Type highlight & Search box
+            const baseRepaired = allRepaired.filter(item => {
+                if (highlightedEquipmentType && item.type !== highlightedEquipmentType) return false;
+                if (searchVal) {
+                    const match = item.id.toLowerCase().includes(searchVal) ||
+                        item.type.toLowerCase().includes(searchVal) ||
+                        item.category.toLowerCase().includes(searchVal) ||
+                        item.description.toLowerCase().includes(searchVal);
+                    if (!match) return false;
+                }
+                return true;
+            });
+
+            // Build Monthly Aggregation Cards
+            const monthGroups = new Map();
+            const currentMonth = getCurrentMonthString();
+            monthGroups.set(currentMonth, { month: currentMonth, total: 0, repairedOp: 0, forTesting: 0, longDownResolved: 0 });
+            if (selectedRepairedMonth && !monthGroups.has(selectedRepairedMonth)) {
+                monthGroups.set(selectedRepairedMonth, { month: selectedRepairedMonth, total: 0, repairedOp: 0, forTesting: 0, longDownResolved: 0 });
+            }
+
+            baseRepaired.forEach(item => {
+                const mKey = item.repairedMonth || currentMonth;
+                if (!monthGroups.has(mKey)) {
+                    monthGroups.set(mKey, { month: mKey, total: 0, repairedOp: 0, forTesting: 0, longDownResolved: 0 });
+                }
+                const entry = monthGroups.get(mKey);
+                entry.total++;
+                if (item.isRepairedOperational) entry.repairedOp++;
+                else entry.forTesting++;
+                if (item.wasLongDown) entry.longDownResolved++;
+            });
+
+            const sortedMonths = Array.from(monthGroups.values()).sort((a, b) => b.month.localeCompare(a.month));
+            monthlyListContainer.innerHTML = '';
+
+            sortedMonths.forEach(mObj => {
+                const isActiveMonth = (repairedFilterMode === 'month' && selectedRepairedMonth === mObj.month) ||
+                    (repairedFilterMode === 'date' && selectedRepairedDate.startsWith(mObj.month));
+
+                const mBtn = document.createElement('button');
+                mBtn.type = "button";
+                mBtn.onclick = () => selectMonthFromSummaryCard(mObj.month);
+                mBtn.className = isActiveMonth
+                    ? "text-left p-2.5 rounded-lg bg-amber-500/20 border border-amber-400 shadow transition space-y-1"
+                    : "text-left p-2.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 transition space-y-1";
+
+                mBtn.innerHTML = `
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[11px] font-black text-white truncate">${formatMonthLabel(mObj.month)}</span>
+                        <span class="text-[10px] font-mono text-slate-400">${mObj.month}</span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-extrabold text-emerald-300">${mObj.repairedOp} Repaired</span>
+                        <span class="font-bold text-blue-300">${mObj.forTesting} Testing</span>
+                    </div>
+                `;
+                monthlyListContainer.appendChild(mBtn);
+            });
+
+            // Period-filtered units
+            const periodFiltered = baseRepaired.filter(item => {
+                if (repairedFilterMode === 'date' && selectedRepairedDate) {
+                    return item.repairedDate === selectedRepairedDate;
+                }
+                if (repairedFilterMode === 'month' && selectedRepairedMonth) {
+                    return item.repairedMonth === selectedRepairedMonth;
+                }
+                return true;
+            });
+
+            // Long Down (>7d) Resolved Spotlight
+            const periodLabel = repairedFilterMode === 'date'
+                ? `${formatFullDateWithMonth(selectedRepairedDate)} (${selectedRepairedDate})`
+                : (repairedFilterMode === 'month'
+                    ? `${formatMonthLabel(selectedRepairedMonth)} (${selectedRepairedMonth})`
+                    : "All Recorded Months");
+
+            const resolvedLongDownInPeriod = periodFiltered
+                .filter(i => i.wasLongDown)
+                .sort((a, b) => (b.repairedDate || '').localeCompare(a.repairedDate || ''));
+
+            spotlightTitle.textContent = `Long Down (>7d) Units Repaired / For Testing — ${periodLabel}`;
+            spotlightCount.textContent = `${resolvedLongDownInPeriod.length} Unit${resolvedLongDownInPeriod.length === 1 ? '' : 's'}`;
+            spotlightGrid.innerHTML = '';
+
+            if (resolvedLongDownInPeriod.length === 0) {
+                emptySpotlightMsg.classList.remove('hidden');
+            } else {
+                emptySpotlightMsg.classList.add('hidden');
+                resolvedLongDownInPeriod.forEach(item => {
+                    const ledCls = item.isRepairedOperational ? 'led-available' : 'led-restored';
+                    const statePill = item.isRepairedOperational
+                        ? `<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">REPAIRED • OPERATIONAL</span>`
+                        : `<span class="text-[9px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">FOR TESTING</span>`;
+
+                    const spotCard = document.createElement('div');
+                    spotCard.onclick = () => openManageModal(item.category, item.type, item.id, item.stateKey);
+                    spotCard.className = "bg-slate-900/90 hover:bg-slate-800 border border-emerald-500/40 rounded-lg p-2.5 cursor-pointer transition flex flex-col justify-between gap-1.5";
+                    spotCard.innerHTML = `
+                        <div class="flex items-center justify-between gap-1.5">
+                            <div class="flex items-center gap-1.5">
+                                <span class="led-sphere ${ledCls}" style="width:12px;height:12px;"></span>
+                                <span class="font-mono font-black text-xs text-white">${item.id}</span>
+                                <span class="text-[10px] font-bold text-slate-300">• ${item.type}</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                ${statePill}
+                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">Was ${item.priorDowntimeDays || '>7'}d Down</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                            <span class="text-emerald-300 font-bold">Repaired: ${formatFullDateWithMonth(item.repairedDate)} (${formatMonthLabel(item.repairedMonth)})</span>
+                            <span class="text-amber-300/90 text-[10px] font-semibold">${item.location}</span>
+                        </div>
+                    `;
+                    spotlightGrid.appendChild(spotCard);
+                });
+            }
+
+            // Final Table Rows
+            let tableFiltered = filterRepairedOnlyLongDown
+                ? periodFiltered.filter(i => i.wasLongDown)
+                : periodFiltered;
+
+            tableFiltered.sort((a, b) => {
+                if (a.repairedDate !== b.repairedDate) return (b.repairedDate || '').localeCompare(a.repairedDate || '');
+                if (a.isRepairedOperational !== b.isRepairedOperational) return a.isRepairedOperational ? -1 : 1;
+                if (a.wasLongDown !== b.wasLongDown) return a.wasLongDown ? -1 : 1;
+                return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            const repairedOpCount = tableFiltered.filter(i => i.isRepairedOperational).length;
+            const forTestingCount = tableFiltered.length - repairedOpCount;
+
+            countBadge.textContent = `${tableFiltered.length} Total (${forTestingCount} Testing, ${repairedOpCount} Repaired)`;
+            repairedOpBadge.textContent = `${repairedOpCount} Repaired (Operational)`;
+            longDownResolvedBadge.textContent = `${resolvedLongDownInPeriod.length} Long Down (>7d) Repaired`;
+            tbody.innerHTML = '';
+
+            if (tableFiltered.length === 0) {
+                emptyBox.classList.remove('hidden');
+                emptyTitle.textContent = `No repaired or for testing assets found for ${periodLabel}${filterRepairedOnlyLongDown ? ' (Long Down >7d Only filter active)' : ''}.`;
+                return;
+            }
+
+            emptyBox.classList.add('hidden');
+
+            tableFiltered.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = item.isRepairedOperational
+                    ? "bg-emerald-950/25 hover:bg-emerald-950/40 transition cursor-pointer"
+                    : (item.wasLongDown
+                        ? "bg-blue-950/20 hover:bg-blue-950/35 transition cursor-pointer"
+                        : "hover:bg-slate-800/70 transition cursor-pointer");
+                tr.onclick = () => openManageModal(item.category, item.type, item.id, item.stateKey);
+
+                const ledCls = item.isRepairedOperational ? 'led-available' : 'led-restored';
+                const assetIdColorCls = item.isRepairedOperational ? 'text-emerald-300' : 'text-blue-300';
+
+                const primaryStatusBadge = item.isRepairedOperational
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">REPAIRED • OPERATIONAL</span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-300 border border-blue-500/30">FOR TESTING</span>`;
+
+                const longDownTagHtml = item.wasLongDown
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/40">LONG DOWN (>7d) RESOLVED</span>`
+                    : '';
+
+                const priorDowntimeHtml = item.priorDowntimeDays > 0
+                    ? `<span class="font-extrabold ${item.wasLongDown ? 'text-rose-300' : 'text-slate-300'}">${item.priorDowntimeDays} day${item.priorDowntimeDays === 1 ? '' : 's'}</span>`
+                    : `<span class="text-slate-500">—</span>`;
+
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 font-mono font-black ${assetIdColorCls}">
+                        <div class="flex items-center gap-2">
+                            <span class="led-sphere ${ledCls}" style="width:14px;height:14px;"></span>
+                            <span>${item.id}</span>
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3">
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            ${primaryStatusBadge}
+                            ${longDownTagHtml}
+                        </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-slate-300 font-medium">${item.category}</td>
+                    <td class="py-2.5 px-3 text-white font-semibold">${item.type}</td>
+                    <td class="py-2.5 px-3 text-amber-300 font-medium">${item.location}</td>
+                    <td class="py-2.5 px-3">
+                        <div class="font-mono font-bold text-emerald-300">${item.repairedDate || 'N/A'}</div>
+                        <div class="text-[10px] font-semibold text-slate-400">${formatFullDateWithMonth(item.repairedDate)} • ${formatMonthLabel(item.repairedMonth)}</div>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">${priorDowntimeHtml}</td>
+                    <td class="py-2.5 px-3 text-slate-300">${item.description || (item.isRepairedOperational ? 'Repaired & Operational' : 'For Testing')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Section 2: Long Down (>7d) & Running Repair Assets
+        function setRepairSectionFilter(mode) {
+            repairSectionFilter = mode;
+            const tabAll = document.getElementById('repairTabAll');
+            const tabLong = document.getElementById('repairTabLongDown');
+            const tabRun = document.getElementById('repairTabRunning');
+
+            tabAll.className = mode === 'all'
+                ? "px-3 py-1 rounded-lg text-xs font-bold bg-blue-600 text-white transition"
+                : "px-3 py-1 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-700 transition";
+
+            tabLong.className = mode === 'long_down'
+                ? "px-3 py-1 rounded-lg text-xs font-bold bg-rose-600 text-white transition"
+                : "px-3 py-1 rounded-lg text-xs font-bold text-rose-300 hover:bg-rose-500/20 transition";
+
+            tabRun.className = mode === 'running'
+                ? "px-3 py-1 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 transition"
+                : "px-3 py-1 rounded-lg text-xs font-bold text-amber-300 hover:bg-amber-500/20 transition";
+
+            renderDashboard();
+        }
+
+        function renderLongDownRunningRepairSection(allActiveRepair, searchVal = "") {
+            const grid = document.getElementById('longDownRunningGrid');
+            const emptyBox = document.getElementById('emptyLongDownRunningMessage');
+
+            const baseActive = allActiveRepair.filter(item => {
+                if (highlightedEquipmentType && item.type !== highlightedEquipmentType) return false;
+                if (searchVal) {
+                    const match = item.id.toLowerCase().includes(searchVal) ||
+                        item.type.toLowerCase().includes(searchVal) ||
+                        item.category.toLowerCase().includes(searchVal) ||
+                        item.description.toLowerCase().includes(searchVal);
+                    if (!match) return false;
+                }
+                return true;
+            });
+
+            const longDownItems = baseActive.filter(i => i.isLongDown);
+            const runningRepairItems = baseActive.filter(i => !i.isLongDown);
+
+            document.getElementById('sectionLongDownBadge').textContent = `${longDownItems.length} Long Down (>7d)`;
+            document.getElementById('sectionRunningRepairBadge').textContent = `${runningRepairItems.length} Running Repair`;
+            document.getElementById('tabCountAll').textContent = baseActive.length;
+            document.getElementById('tabCountLongDown').textContent = longDownItems.length;
+            document.getElementById('tabCountRunning').textContent = runningRepairItems.length;
+
+            let displayed = baseActive;
+            if (repairSectionFilter === 'long_down') displayed = longDownItems;
+            else if (repairSectionFilter === 'running') displayed = runningRepairItems;
+
+            displayed.sort((a, b) => {
+                if (a.isLongDown !== b.isLongDown) return a.isLongDown ? -1 : 1;
+                if (b.daysDown !== a.daysDown) return b.daysDown - a.daysDown;
+                return a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
+            grid.innerHTML = '';
+
+            if (displayed.length === 0) {
+                emptyBox.classList.remove('hidden');
+                return;
+            }
+            emptyBox.classList.add('hidden');
+
+            displayed.forEach(item => {
+                const card = document.createElement('div');
+                card.onclick = () => openManageModal(item.category, item.type, item.id, item.stateKey);
+                card.className = item.isLongDown
+                    ? "bg-rose-950/35 hover:bg-rose-950/50 border border-rose-500/50 rounded-xl p-3.5 transition cursor-pointer flex flex-col justify-between gap-2.5 shadow-md"
+                    : "bg-slate-950/70 hover:bg-slate-800/80 border border-slate-700/80 rounded-xl p-3.5 transition cursor-pointer flex flex-col justify-between gap-2.5";
+
+                const statusLabel = item.isLongDown
+                    ? `LONG DOWN (>7d) • ${getMemsStatusLabel(item.memsStatus)}`
+                    : `RUNNING REPAIR • ${getMemsStatusLabel(item.memsStatus)}`;
+
+                const statusPillCls = item.isLongDown
+                    ? "bg-rose-600/30 text-rose-200 border border-rose-500/50"
+                    : (item.memsStatus === 'down'
+                        ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                        : "bg-amber-500/15 text-amber-300 border border-amber-500/30");
+
+                const barColorCls = item.isLongDown ? "bg-rose-500" : (item.memsStatus === 'down' ? "bg-rose-400" : "bg-amber-400");
+
+                card.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="led-sphere led-${item.memsStatus}" style="width:16px;height:16px;"></span>
+                                <span class="font-mono font-black text-sm text-white">${item.id}</span>
+                                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${statusPillCls}">${statusLabel}</span>
+                            </div>
+                            <span class="text-xs font-black ${item.isLongDown ? 'text-rose-300' : 'text-amber-300'} shrink-0">${item.daysDown}d down</span>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-300">
+                            <span class="font-bold text-slate-100">${item.type}</span>
+                            <span class="text-slate-400">${item.category} • <strong class="text-amber-300/90">${item.location}</strong></span>
+                        </div>
+
+                        <p class="text-xs text-slate-300 bg-slate-900/70 border border-slate-800 rounded-lg px-2.5 py-1.5 line-clamp-2">
+                            ${item.description || "Active repair / fault investigation in progress"}
+                        </p>
+                    </div>
+
+                    <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-slate-400">Since: <strong class="text-slate-200 font-mono">${item.downSince || 'N/A'}</strong>${item.targetDate ? ` • Target: <strong class="text-blue-300 font-mono">${item.targetDate}</strong>` : ''}</span>
+                            <span class="font-extrabold text-slate-200">${item.completion}%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                            <div class="h-full ${barColorCls} transition-all duration-300" style="width:${Math.min(100, Math.max(0, item.completion))}%"></div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        function populateDynamicEquipmentTypes(selectedCategory = null) {
+            const catSelect = document.getElementById('newAssetCategorySelect');
+            const typeSelect = document.getElementById('newAssetTypeSelect');
+            if (!catSelect || !typeSelect) return;
+
+            const activeCategory = selectedCategory || catSelect.value || "LIGHT EQUIPMENT";
+            const baseTypes = CATEGORY_EQUIPMENT_TYPES[activeCategory] || [];
+            const customStateTypes = state
+                .filter(r => r.category === activeCategory && !baseTypes.includes(r.type))
+                .map(r => r.type);
+
+            const merged = [...baseTypes, ...customStateTypes];
+
+            typeSelect.innerHTML = '';
+            merged.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                typeSelect.appendChild(opt);
+            });
+
+            const customOpt = document.createElement('option');
+            customOpt.value = "__CUSTOM__";
+            customOpt.textContent = "+ Custom Equipment Type...";
+            typeSelect.appendChild(customOpt);
+
+            handleNewTypeChange(typeSelect.value);
+        }
+
+        function handleNewCategoryChange(newCat) {
+            populateDynamicEquipmentTypes(newCat);
+        }
+
+        function setAddEntryMode(mode) {
+            addEntryMode = mode;
+            const singleBtn = document.getElementById('modeSingleBtn');
+            const bulkBtn = document.getElementById('modeBulkBtn');
+            const singleWrap = document.getElementById('singleAssetInputWrapper');
+            const bulkWrap = document.getElementById('bulkAssetInputWrapper');
+
+            if (mode === 'single') {
+                singleBtn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white transition";
+                bulkBtn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+                singleWrap.classList.remove('hidden');
+                bulkWrap.classList.add('hidden');
+            } else {
+                bulkBtn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white transition";
+                singleBtn.className = "flex-1 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-white transition";
+                bulkWrap.classList.remove('hidden');
+                singleWrap.classList.add('hidden');
+            }
+        }
+
+        function handleNewTypeChange(val) {
+            const customWrapper = document.getElementById('customEquipTypeWrapper');
+            if (val === "__CUSTOM__") {
+                customWrapper.classList.remove('hidden');
+            } else {
+                customWrapper.classList.add('hidden');
+            }
+        }
+
+        function adjustAddFormDefaults() {
+            const stateKey = document.getElementById('newAssetStatus').value;
+            const progressInput = document.getElementById('newAssetProgress');
+            const downSinceWrap = document.getElementById('newAssetDownSinceWrapper');
+            const repairedWrap = document.getElementById('newAssetRepairedDateWrapper');
+            const todayStr = getTodayDateString();
+
+            if (stateKey === 'released') {
+                progressInput.value = 100;
+                progressInput.disabled = true;
+                downSinceWrap.classList.add('hidden');
+                repairedWrap.classList.add('hidden');
+            } else if (stateKey === 'restored') {
+                progressInput.value = 100;
+                progressInput.disabled = true;
+                downSinceWrap.classList.add('hidden');
+                repairedWrap.classList.remove('hidden');
+                if (!document.getElementById('newAssetRepairedDate').value) {
+                    document.getElementById('newAssetRepairedDate').value = todayStr;
+                }
+            } else if (stateKey === 'waiting') {
+                progressInput.value = 15;
+                progressInput.disabled = false;
+                downSinceWrap.classList.remove('hidden');
+                repairedWrap.classList.add('hidden');
+                if (!document.getElementById('newAssetDownSince').value) {
+                    document.getElementById('newAssetDownSince').value = todayStr;
+                }
+            } else {
+                progressInput.value = 40;
+                progressInput.disabled = false;
+                downSinceWrap.classList.remove('hidden');
+                repairedWrap.classList.add('hidden');
+                if (!document.getElementById('newAssetDownSince').value) {
+                    document.getElementById('newAssetDownSince').value = todayStr;
+                }
+            }
+        }
+
+        function openAddAssetModal() {
+            const catSelect = document.getElementById('newAssetCategorySelect');
+            catSelect.value = "LIGHT EQUIPMENT";
+            populateDynamicEquipmentTypes("LIGHT EQUIPMENT");
+            setAddEntryMode('single');
+            document.getElementById('newSingleAssetCode').value = '';
+            document.getElementById('newBulkAssetCodes').value = '';
+            document.getElementById('newCustomAssetType').value = '';
+            document.getElementById('newAssetNotes').value = '';
+            const todayStr = getTodayDateString();
+            document.getElementById('newAssetTargetDate').value = todayStr;
+            document.getElementById('newAssetDownSince').value = todayStr;
+            document.getElementById('newAssetRepairedDate').value = todayStr;
+            adjustAddFormDefaults();
+            openModal('addAssetModal');
+            lucide.createIcons();
+            setTimeout(() => document.getElementById('newSingleAssetCode').focus(), 60);
+        }
+
+        async function handleAddAssetSubmit(e) {
+            e.preventDefault();
+            const selectedCategory = document.getElementById('newAssetCategorySelect').value;
+            let selectedType = document.getElementById('newAssetTypeSelect').value;
+            if (selectedType === "__CUSTOM__") {
+                selectedType = document.getElementById('newCustomAssetType').value.toUpperCase().trim();
+                if (!selectedType) {
+                    showToast("Please specify a custom equipment type.", "error");
+                    return;
+                }
+            }
+
+            const location = document.getElementById('newAssetLocation').value;
+            const stateKey = document.getElementById('newAssetStatus').value;
+            const progress = parseInt(document.getElementById('newAssetProgress').value) || 0;
+            const targetDate = document.getElementById('newAssetTargetDate').value;
+            const downSince = document.getElementById('newAssetDownSince').value || getTodayDateString();
+            const repairedDate = document.getElementById('newAssetRepairedDate').value || getTodayDateString();
+            const notes = document.getElementById('newAssetNotes').value.trim();
+
+            let rawCodes = [];
+            if (addEntryMode === 'single') {
+                const singleVal = document.getElementById('newSingleAssetCode').value.toUpperCase().trim();
+                if (!singleVal) {
+                    showToast("Please enter an asset number to monitor.", "error");
+                    return;
+                }
+                rawCodes = [singleVal];
+            } else {
+                const bulkText = document.getElementById('newBulkAssetCodes').value.toUpperCase();
+                rawCodes = bulkText
+                    .split(/[\n,;]+/)
+                    .map(s => s.trim())
+                    .filter(Boolean);
+                if (rawCodes.length === 0) {
+                    showToast("Please enter one or more asset numbers.", "error");
+                    return;
+                }
+            }
+
+            const existingMap = new Map();
+            state.forEach(row => {
+                const allUnits = [
+                    ...(row.ongoing || []), ...(row.pms || []), ...(row.jobout || []),
+                    ...(row.waiting || []), ...(row.released || []), ...(row.restored || [])
+                ];
+                allUnits.forEach(u => existingMap.set(u.id, row.type));
+            });
+
+            let row = state.find(item => item.type === selectedType && item.category === selectedCategory);
+            if (!row) {
+                row = state.find(item => item.type === selectedType);
+            }
+            if (!row) {
+                row = {
+                    category: selectedCategory,
+                    type: selectedType,
+                    released: [],
+                    restored: [],
+                    waiting: [],
+                    pms: [],
+                    ongoing: [],
+                    jobout: []
+                };
+                state.push(row);
+            }
+
+            if (!row[stateKey]) row[stateKey] = [];
+            const isHealthy = (stateKey === 'released' || stateKey === 'restored');
+            const isActiveDownOrReported = (stateKey === 'ongoing' || stateKey === 'waiting' || stateKey === 'pms' || stateKey === 'jobout');
+
+            const addedCodes = [];
+            const skippedCodes = [];
+
+            rawCodes.forEach(code => {
+                if (existingMap.has(code) || addedCodes.includes(code)) {
+                    skippedCodes.push(code);
+                    return;
+                }
+                const newUnit = {
+                    id: code,
+                    completion: isHealthy ? 100 : progress,
+                    targetDate: targetDate || null,
+                    description: notes || (isHealthy ? (stateKey === 'restored' ? "For Testing" : "Operational") : "Added for monitoring"),
+                    location: location
+                };
+                if (stateKey === 'restored') {
+                    newUnit.repairedDate = repairedDate;
+                    newUnit.wasLongDown = false;
+                    newUnit.priorDowntimeDays = 0;
+                }
+                if (isActiveDownOrReported) {
+                    newUnit.downSince = downSince;
+                }
+                row[stateKey].push(newUnit);
+                addedCodes.push(code);
+            });
+
+            if (addedCodes.length === 0) {
+                showToast(`Asset number(s) already exist on the monitoring wall: ${skippedCodes.join(', ')}`, "error");
+                return;
+            }
+
+            populateDynamicEquipmentTypes(selectedCategory);
+            renderDashboard();
+            closeModal('addAssetModal');
+
+            let msg = `Added ${addedCodes.join(', ')} to ${selectedType} [${selectedCategory}] (${getMemsStatusLabel(getMemsStatusFromStateKey(stateKey))}).`;
+            if (skippedCodes.length > 0) {
+                msg += ` Skipped existing: ${skippedCodes.join(', ')}.`;
+            }
+            showToast(msg, "success");
+            await saveToSheet();
+        }
+
+        function updateProgressDisplay(val) {
+            document.getElementById('progressPercentDisplay').textContent = `${val}%`;
+        }
+
+        function populateManageEquipmentTypes(category, selectedType = null) {
+            const typeSelect = document.getElementById('manageUnitTypeSelect');
+            if (!typeSelect) return;
+            const baseTypes = CATEGORY_EQUIPMENT_TYPES[category] || [];
+            const customStateTypes = state
+                .filter(r => r.category === category && !baseTypes.includes(r.type))
+                .map(r => r.type);
+            const merged = [...baseTypes, ...customStateTypes];
+
+            typeSelect.innerHTML = '';
+            merged.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t;
+                opt.textContent = t;
+                typeSelect.appendChild(opt);
+            });
+
+            if (selectedType && merged.includes(selectedType)) {
+                typeSelect.value = selectedType;
+            }
+        }
+
+        function handleManageCategoryChange(newCat) {
+            populateManageEquipmentTypes(newCat);
+        }
+
+        function updateManageLongDownPreview() {
+            const statusKey = document.getElementById('manageUnitStatus').value;
+            const downSinceVal = document.getElementById('manageUnitDownSince').value;
+            const previewEl = document.getElementById('manageLongDownPreview');
+            const isActiveRepair = (statusKey === 'ongoing' || statusKey === 'waiting' || statusKey === 'pms' || statusKey === 'jobout');
+
+            if (!isActiveRepair) {
+                previewEl.textContent = "Not currently down/reported";
+                previewEl.className = "text-[10px] font-semibold text-slate-400 mt-1";
+                return;
+            }
+
+            const days = calculateDaysDown(downSinceVal);
+            if (days > LONG_DOWN_THRESHOLD_DAYS) {
+                previewEl.textContent = `⚠ AUTO-FLAGGED: ${days} days down (>7 days Long Down)`;
+                previewEl.className = "text-[10px] font-black text-rose-400 mt-1";
+            } else {
+                previewEl.textContent = `Running Repair: ${days} day${days === 1 ? '' : 's'} down (flags at >7d)`;
+                previewEl.className = "text-[10px] font-bold text-amber-300 mt-1";
+            }
+        }
+
+        function openManageModal(category, type, unitCode, stateKey) {
+            const row = state.find(item => item.type === type);
+            if (!row) return;
+            const list = row[stateKey] || [];
+            const unit = list.find(u => u.id === unitCode);
+            if (!unit) return;
+
+            activeManageState = { category, type, unitCode, stateKey, unitObj: unit };
+            deleteConfirmPending = false;
+            document.getElementById('deleteUnitBtnText').textContent = "Remove Asset";
+
+            document.getElementById('manageUnitBadge').textContent = unitCode;
+            document.getElementById('manageUnitCategoryDisplay').textContent = category;
+            document.getElementById('manageUnitTypeDisplay').textContent = type;
+
+            const catSelect = document.getElementById('manageUnitCategorySelect');
+            catSelect.value = category;
+            populateManageEquipmentTypes(category, type);
+
+            const ledEl = document.getElementById('manageUnitLed');
+            ledEl.className = `led-sphere led-${getMemsStatusFromStateKey(stateKey)}`;
+
+            document.getElementById('manageUnitDescription').value = unit.description || '';
+            document.getElementById('manageUnitStatus').value = stateKey;
+            document.getElementById('manageUnitLocation').value = unit.location || 'GEM Motorpool';
+
+            const todayStr = getTodayDateString();
+            document.getElementById('manageUnitDownSince').value = unit.downSince || todayStr;
+            document.getElementById('manageUnitRepairedDate').value = unit.repairedDate || todayStr;
+
+            const comp = unit.completion ?? (stateKey === 'released' || stateKey === 'restored' ? 100 : 0);
+            updateProgressDisplay(comp);
+            document.getElementById('manageUnitProgressSlider').value = comp;
+            document.getElementById('manageUnitTargetDate').value = unit.targetDate || "";
+
+            syncManageDateFieldsVisibility(stateKey);
+            updateManageLongDownPreview();
+
+            openModal('manageUnitModal');
+            lucide.createIcons();
+        }
+
+        function syncManageDateFieldsVisibility(statusKey) {
+            const downWrap = document.getElementById('manageDownSinceWrapper');
+            const repWrap = document.getElementById('manageRepairedDateWrapper');
+            const repLabel = document.getElementById('manageRepairedDateLabel');
+            const promoHint = document.getElementById('manageRepairedPromotionHint');
+            const isActiveRepair = (statusKey === 'ongoing' || statusKey === 'waiting' || statusKey === 'pms' || statusKey === 'jobout');
+            const isPromotingFromTesting = (activeManageState.stateKey === 'restored' && statusKey === 'released');
+            const isAlreadyRepairedOperational = (statusKey === 'released' && Boolean(activeManageState.unitObj?.isRepaired));
+
+            if (isPromotingFromTesting) {
+                promoHint.classList.remove('hidden');
+            } else {
+                promoHint.classList.add('hidden');
+            }
+
+            if (isActiveRepair) {
+                downWrap.classList.remove('hidden');
+                repWrap.classList.add('hidden');
+            } else if (statusKey === 'restored') {
+                downWrap.classList.add('hidden');
+                repWrap.classList.remove('hidden');
+                repLabel.textContent = "Repaired / For Testing Date";
+            } else if (isPromotingFromTesting || isAlreadyRepairedOperational) {
+                downWrap.classList.add('hidden');
+                repWrap.classList.remove('hidden');
+                repLabel.textContent = "Repaired Date (Logged)";
+            } else {
+                downWrap.classList.add('hidden');
+                repWrap.classList.add('hidden');
+            }
+        }
+
+        function handleManageStatusChange(newStatusKey) {
+            const slider = document.getElementById('manageUnitProgressSlider');
+            const ledEl = document.getElementById('manageUnitLed');
+            const todayStr = getTodayDateString();
+            ledEl.className = `led-sphere led-${getMemsStatusFromStateKey(newStatusKey)}`;
+
+            if (newStatusKey === 'released' || newStatusKey === 'restored') {
+                updateProgressDisplay(100);
+                slider.value = 100;
+                if ((newStatusKey === 'restored' || activeManageState.stateKey === 'restored') && !document.getElementById('manageUnitRepairedDate').value) {
+                    document.getElementById('manageUnitRepairedDate').value = todayStr;
+                }
+            } else if (newStatusKey === 'waiting') {
+                if (slider.value == 100) slider.value = 15;
+                updateProgressDisplay(slider.value);
+                if (!document.getElementById('manageUnitDownSince').value) {
+                    document.getElementById('manageUnitDownSince').value = todayStr;
+                }
+            } else {
+                if (slider.value == 100) slider.value = 40;
+                updateProgressDisplay(slider.value);
+                if (!document.getElementById('manageUnitDownSince').value) {
+                    document.getElementById('manageUnitDownSince').value = todayStr;
+                }
+            }
+
+            syncManageDateFieldsVisibility(newStatusKey);
+            updateManageLongDownPreview();
+        }
+
+        async function saveAssetDetailedChanges() {
+            const { type, unitCode, stateKey, unitObj } = activeManageState;
+            const sourceRow = state.find(item => item.type === type);
+            if (!sourceRow || !unitObj) return;
+
+            const newCategory = document.getElementById('manageUnitCategorySelect').value;
+            const newType = document.getElementById('manageUnitTypeSelect').value;
+            const newStatusKey = document.getElementById('manageUnitStatus').value;
+            const newDescription = document.getElementById('manageUnitDescription').value.trim();
+            const newTargetDate = document.getElementById('manageUnitTargetDate').value;
+            const newLocation = document.getElementById('manageUnitLocation').value;
+            const newProgress = parseInt(document.getElementById('manageUnitProgressSlider').value) || 0;
+            const newDownSince = document.getElementById('manageUnitDownSince').value || getTodayDateString();
+            const newRepairedDate = document.getElementById('manageUnitRepairedDate').value || getTodayDateString();
+
+            const wasActiveRepair = (stateKey === 'ongoing' || stateKey === 'waiting' || stateKey === 'pms' || stateKey === 'jobout');
+            const wasForTesting = (stateKey === 'restored');
+            const previousDownSince = unitObj.downSince || '';
+
+            sourceRow[stateKey] = (sourceRow[stateKey] || []).filter(u => u.id !== unitCode);
+
+            let targetRow = state.find(item => item.type === newType);
+            if (!targetRow) {
+                targetRow = {
+                    category: newCategory,
+                    type: newType,
+                    released: [], restored: [], waiting: [], pms: [], ongoing: [], jobout: []
+                };
+                state.push(targetRow);
+            }
+            targetRow.category = newCategory;
+
+            const isNowHealthy = (newStatusKey === 'released' || newStatusKey === 'restored');
+            const isNowActiveRepair = (newStatusKey === 'ongoing' || newStatusKey === 'waiting' || newStatusKey === 'pms' || newStatusKey === 'jobout');
+
+            unitObj.description = newDescription;
+            unitObj.targetDate = newTargetDate;
+            unitObj.location = newLocation;
+            unitObj.completion = isNowHealthy ? 100 : newProgress;
+
+            let promotedToOperationalAsRepaired = false;
+
+            if (newStatusKey === 'restored') {
+                unitObj.repairedDate = newRepairedDate;
+                if (wasActiveRepair && previousDownSince) {
+                    const resolvedDays = calculateDaysBetween(previousDownSince, newRepairedDate);
+                    unitObj.priorDowntimeDays = resolvedDays;
+                    unitObj.wasLongDown = resolvedDays > LONG_DOWN_THRESHOLD_DAYS;
+                } else if (typeof unitObj.priorDowntimeDays !== 'number') {
+                    unitObj.priorDowntimeDays = 0;
+                    unitObj.wasLongDown = false;
+                }
+                delete unitObj.downSince;
+            } else if (newStatusKey === 'released') {
+                delete unitObj.downSince;
+                // When an asset in "For Testing" updates to "Operational", include it as Repaired in REPAIRED/FOR TESTING ASSETS - DAILY & MONTHLY LOG
+                if (wasForTesting || unitObj.isRepaired) {
+                    promotedToOperationalAsRepaired = wasForTesting;
+                    unitObj.isRepaired = true;
+                    unitObj.repairedDate = newRepairedDate || unitObj.repairedDate || getTodayDateString();
+                    if (typeof unitObj.priorDowntimeDays !== 'number') {
+                        unitObj.priorDowntimeDays = 0;
+                    }
+                    if (typeof unitObj.wasLongDown !== 'boolean') {
+                        unitObj.wasLongDown = unitObj.priorDowntimeDays > LONG_DOWN_THRESHOLD_DAYS;
+                    }
+                    if (!unitObj.description || unitObj.description === "For Testing") {
+                        unitObj.description = "Repaired & Operational (Passed Testing)";
+                    } else if (wasForTesting && /for testing/i.test(unitObj.description)) {
+                        unitObj.description = unitObj.description.replace(/for testing/ig, "Repaired & Operational");
+                    }
+                }
+            } else if (isNowActiveRepair) {
+                unitObj.downSince = newDownSince;
+                delete unitObj.repairedDate;
+                delete unitObj.wasLongDown;
+                delete unitObj.priorDowntimeDays;
+                delete unitObj.isRepaired;
+            }
+
+            if (!targetRow[newStatusKey]) targetRow[newStatusKey] = [];
+            targetRow[newStatusKey].push(unitObj);
+
+            renderDashboard();
+            closeModal('manageUnitModal');
+
+            if (promotedToOperationalAsRepaired) {
+                showToast(`${unitCode} (${newType}) updated to Operational & logged as Repaired in Daily & Monthly Log.`, "success");
+            } else {
+                showToast(`Updated ${unitCode} (${newType}) → ${getMemsStatusLabel(getMemsStatusFromStateKey(newStatusKey))}`, "success");
+            }
+            await saveToSheet();
+        }
+
+        async function handleDeleteUnitClick() {
+            if (!deleteConfirmPending) {
+                deleteConfirmPending = true;
+                document.getElementById('deleteUnitBtnText').textContent = "Click Again to Confirm";
+                return;
+            }
+            const { type, unitCode, stateKey } = activeManageState;
+            const row = state.find(item => item.type === type);
+            if (!row) return;
+
+            row[stateKey] = (row[stateKey] || []).filter(u => u.id !== unitCode);
+
+            renderDashboard();
+            closeModal('manageUnitModal');
+            showToast(`Removed asset ${unitCode} from monitoring.`, "info");
+            await saveToSheet();
+        }
+
+        function downloadCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Category,Equipment Type,Asset Number,LED Status,Repaired Log Status,Long Down (>7d),Days Down / Prior Downtime,Down Since,Repaired Date,Repaired Month,Location,Completion,Target Date,Remarks\n";
+            state.forEach(row => {
+                const allLists = [
+                    { list: row.released || [], status: "Operational", memsStatus: "available" },
+                    { list: row.restored || [], status: "For Testing", memsStatus: "restored" },
+                    { list: row.waiting || [], status: "Reported", memsStatus: "reported" },
+                    { list: row.pms || [], status: "Reported", memsStatus: "reported" },
+                    { list: row.ongoing || [], status: "Down", memsStatus: "down" },
+                    { list: row.jobout || [], status: "Down", memsStatus: "down" }
+                ];
+                allLists.forEach(({ list, status, memsStatus }) => {
+                    list.forEach(u => {
+                        const desc = (u.description || "").replace(/,/g, " ");
+                        const comp = u.completion ?? (status === "Operational" || status === "For Testing" ? 100 : 0);
+                        const isActiveRepair = (memsStatus === "down" || memsStatus === "reported");
+                        const daysDown = isActiveRepair ? calculateDaysDown(u.downSince) : (u.priorDowntimeDays || 0);
+                        const isLongDown = isActiveRepair
+                            ? (daysDown > LONG_DOWN_THRESHOLD_DAYS)
+                            : Boolean(u.wasLongDown);
+                        const repLogStatus = memsStatus === "restored"
+                            ? "FOR TESTING"
+                            : (memsStatus === "available" && u.isRepaired ? "REPAIRED (OPERATIONAL)" : "");
+                        const repDate = u.repairedDate || '';
+                        const repMonth = repDate.length >= 7 ? repDate.slice(0, 7) : '';
+                        csvContent += `"${row.category}","${row.type}","${u.id}","${status}","${repLogStatus}","${isLongDown ? 'YES' : 'NO'}",${daysDown},"${u.downSince || ''}","${repDate}","${repMonth}","${u.location || 'GEM Motorpool'}",${comp}%,"${u.targetDate || ''}","${desc}"\n`;
+                    });
+                });
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `logistics_fleet_monitoring_${getTodayDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Logistics Fleet Monitoring CSV exported successfully.", "success");
+        }
+    </script>
+</body>
+</html>
